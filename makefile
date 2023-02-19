@@ -2,4 +2,4 @@ SRCS=$(wildcard *.c)
 NAME=rice10
 
 all:
-	gcc -oFast $(SRCS) -o $(NAME)
+	gcc -Ofast $(SRCS) -o $(NAME)

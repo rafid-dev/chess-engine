@@ -79,14 +79,35 @@ int ParseMove (char *ptrChar, S_BOARD *pos){
 	return NOMOVE;
 }
 
-void PrintMoveList(const S_MOVELIST *list) {
+static inline void PickNextMove(int movenum, S_MOVELIST *list)
+{
+    S_MOVE temp;
+    int index = 0;
+    int bestscore = 0;
+    int bestnum = movenum;
+
+    for (index = movenum; index < list->count; ++index)
+    {
+        if (list->moves[index].score > bestscore)
+        {
+            bestscore = list->moves[index].score;
+            bestnum = index;
+        }
+    }
+
+    temp = list->moves[movenum];
+    list->moves[movenum] = list->moves[bestnum];
+    list->moves[bestnum] = temp;
+}
+
+void PrintMoveList(S_MOVELIST *list) {
 	int index = 0;
 	int score = 0;
 	int move = 0;
 	printf("MoveList:\n");
 
 	for(index = 0; index < list->count; ++index) {
-
+		PickNextMove(index, list);
 		move = list->moves[index].move;
 		score = list->moves[index].score;
 

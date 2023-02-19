@@ -1,4 +1,5 @@
-#include <time.h>   
+#include <time.h>
+#include <math.h>
 #include "defs.h"
 
 #define RAND_64	((U64)rand() | \
@@ -26,6 +27,8 @@ U64 RankBBMask[64];
 U64 BlackPassedMask[64];
 U64 WhitePassedMask[64];
 U64 IsolatedMask[64];
+
+int LMRTable[MAXDEPTH][MAXDEPTH];
 
 void InitEvalMasks(){
 	int sq, tsq, r, f;
@@ -148,7 +151,6 @@ void InitBitMasks() {
 	}
 }
 
-
 void InitSq120To64() {
 
 	int index = 0;
@@ -175,6 +177,18 @@ void InitSq120To64() {
 	}
 }
 
+void InitSearch()
+{
+    // Init Late Move Reductions Table
+    for (int depth = 1; depth < MAXDEPTH; depth++)
+    {
+        for (int played = 1; played < MAXDEPTH; played++)
+        {
+            LMRTable[depth][played] = 0.75 + log(depth) * log(played) / 2.25;
+        }
+    }
+}
+
 
 void AllInit(){
     InitSq120To64();
@@ -183,4 +197,6 @@ void AllInit(){
     InitFilesRanksBrd();
 	InitEvalMasks();
 	InitMvvlva();
+	InitSearch();
+	init_tables();
 }

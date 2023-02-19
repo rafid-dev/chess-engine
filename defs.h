@@ -24,7 +24,7 @@
 
 typedef unsigned long long U64;
 
-#define NAME "Rice 1.0"
+#define NAME "Rice 1.0 LMR2"
 #define BRD_SQ_NUM 120
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
@@ -37,6 +37,9 @@ typedef unsigned long long U64;
 
 #define INF_BOUND 30000
 #define ISMATE (INF_BOUND - MAXDEPTH)
+
+#define MIN(a,b)(((a) < (b)) ? (a) : (b))
+#define MAX(a,b)(((a) > (b)) ? (a) : (b))
 
 enum {EMPTY, wP, wN, wB, wR, wQ, wK, bP, bN, bB, bR, bQ, bK};
 enum {FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H, FILE_NONE};
@@ -58,6 +61,8 @@ enum {WHITE, BLACK, BOTH};
 enum {WKCA = 1, WQCA = 2, BKCA = 4, BQCA = 8};
 
 enum {HFNONE, HFALPHA, HFBETA, HFEXACT};
+
+enum {PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING};
 
 typedef struct{
     int move;
@@ -232,11 +237,12 @@ extern U64 BlackPassedMask[64];
 extern U64 WhitePassedMask[64];
 extern U64 IsolatedMask[64];
 
-/*FUNCTIONS*/
+extern int LMRTable[MAXDEPTH][MAXDEPTH];
+
+/* FUNCTIONS */
 
 //init.c
 extern void AllInit();
-
 
 // bitboards.c
 extern int PopBit(U64 *bb);
@@ -260,7 +266,7 @@ extern int SqAttacked(const int sq, const int side, const S_BOARD *pos);
 // io.c
 extern char *PrMove(const int move);
 extern char *PrSq(const int sq);
-extern void PrintMoveList(const S_MOVELIST *list);
+extern void PrintMoveList(S_MOVELIST *list);
 extern int ParseMove(char *ptrChar, S_BOARD *pos);
 
 // movegen.c
@@ -288,7 +294,6 @@ extern void TakeNullMove(S_BOARD *pos);
 extern void PerftTest(int depth, S_BOARD *pos);
 
 //search.c
-extern int IsRepetition(const S_BOARD *pos);
 extern void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info);
 
 //misc.c
@@ -304,6 +309,7 @@ extern int GetPvLine(const int depth, S_BOARD *pos);
 extern void ClearHashTable(S_HASHTABLE *table);
 
 //evaluate.c
+extern void init_tables();
 extern int EvalPosition(const S_BOARD *pos);
 
 //uci.c

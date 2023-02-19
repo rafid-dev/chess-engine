@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "defs.h"
 
-static void CheckUp(S_SEARCHINFO *info)
+static inline void CheckUp(S_SEARCHINFO *info)
 {
     // check if time up or interupt from GUI
 
@@ -13,7 +13,7 @@ static void CheckUp(S_SEARCHINFO *info)
     ReadInput(info);
 }
 
-static void PickNextMove(int movenum, S_MOVELIST *list)
+static inline void PickNextMove(int movenum, S_MOVELIST *list)
 {
     S_MOVE temp;
     int index = 0;
@@ -34,7 +34,7 @@ static void PickNextMove(int movenum, S_MOVELIST *list)
     list->moves[bestnum] = temp;
 }
 
-int IsRepetition(const S_BOARD *pos)
+static inline int IsRepetition(const S_BOARD *pos)
 {
     int index = 0;
 
@@ -50,7 +50,7 @@ int IsRepetition(const S_BOARD *pos)
     return FALSE;
 }
 
-static void ClearForSearch(S_BOARD *pos, S_SEARCHINFO *info)
+static inline void ClearForSearch(S_BOARD *pos, S_SEARCHINFO *info)
 {
     int index = 0;
     int index2 = 0;
@@ -82,7 +82,7 @@ static void ClearForSearch(S_BOARD *pos, S_SEARCHINFO *info)
 	info->fhf = 0;
 }
 
-static int Quiescence(int alpha, int beta, S_BOARD *pos, S_SEARCHINFO *info)
+static inline int Quiescence(int alpha, int beta, S_BOARD *pos, S_SEARCHINFO *info)
 {
     ASSERT(CheckBoard(pos));
 
@@ -158,7 +158,7 @@ static int Quiescence(int alpha, int beta, S_BOARD *pos, S_SEARCHINFO *info)
     return alpha;
 }
 
-static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, int DoNull)
+static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, int DoNull)
 {
     ASSERT(CheckBoard(pos));
 
@@ -191,25 +191,35 @@ static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO 
     }
 
     int score = -INF_BOUND;
+    int isPvNode = beta-alpha != 1;
+    int PvMove = NOMOVE;    
+    int posEval = EvalPosition(pos);
 
-    int PvMove = NOMOVE;
     if( ProbeHashEntry(pos, &PvMove, &score, alpha, beta, depth) == TRUE ) {
 		pos->HashTable->cut++;
 		return score;
 	}
 
-    if (DoNull && !InCheck && pos->ply && (pos->bigPiece[pos->side] > 1) && depth >= 4)
-    {
-        MakeNullMove(pos);
-        score = -AlphaBeta(-beta, -beta + 1, depth - 4, pos, info, FALSE);
-        TakeNullMove(pos);
-        if (info->stopped == TRUE)
+    if (!isPvNode && !InCheck && pos->ply){
+        /* Reverse Futility Pruning (RFP) */
+        if (depth <= 5 && posEval >= beta && posEval - (depth * 75) >= beta && posEval < ISMATE)
         {
-            return 0;
+            return posEval;
         }
-        if (score >= beta && abs(score) < ISMATE)
+        /* NULL Move Pruning (NMP) */
+        if ((pos->bigPiece[pos->side] > 1) && depth >= 4)
         {
-            return beta;
+            MakeNullMove(pos);
+            score = -AlphaBeta(-beta, -beta + 1, depth - 4, pos, info, FALSE);
+            TakeNullMove(pos);
+            if (info->stopped == TRUE)
+            {
+                return 0;
+            }
+            if (score >= beta && abs(score) < ISMATE)
+            {
+                return beta;
+            }
         }
     }
 
@@ -231,7 +241,7 @@ static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO 
 			}
 		}
 	}
-
+    int pvs = 1; // Condition to consider pvs.
     for (MoveNum = 0; MoveNum < list->count; ++MoveNum)
     {
         PickNextMove(MoveNum, list);
@@ -239,9 +249,44 @@ static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO 
         {
             continue;
         }
-
         Legal++;
-        score = -AlphaBeta(-beta, -alpha, depth - 1, pos, info, TRUE);
+        int move = list->moves[MoveNum].move;
+        int do_fullsearch = FALSE;
+        int histScore = pos->searchHistory[pos->pieces[FROMSQ(move)]][TOSQ(move)];
+
+        // Late Move Reduction (LMR)
+        if (!InCheck && depth >= 3 && Legal >= 5 && !(move & MFLAGCAP)){
+
+            int reduction = LMRTable[MIN(depth, 64)][MAX(Legal, 63)];
+            reduction = MIN(depth - 1, MAX(1, reduction));
+
+            score = -AlphaBeta(-alpha-1, -alpha, depth - reduction, pos, info, TRUE);
+
+            do_fullsearch = score > alpha && reduction != 1;
+
+        }else{
+            do_fullsearch = !isPvNode || Legal > 1;
+        }
+
+        // Full depth search on a null window
+        if (do_fullsearch){
+            score = -AlphaBeta(-alpha-1, -alpha, depth - 1, pos, info, TRUE);
+        }
+
+        // Principal Variation Search (PVS)
+        if (isPvNode && (Legal == 1 || score > alpha)){
+            score = -AlphaBeta(-beta, -alpha, depth - 1, pos, info, TRUE);
+        }
+        
+        /*if (pvs){
+            score = -AlphaBeta(-beta, -alpha, depth - 1, pos, info, TRUE);
+        }else{
+            score = -AlphaBeta(-alpha-1, -alpha, depth - 1, pos, info, TRUE);
+            if (score > alpha){
+                score = -AlphaBeta(-beta, -alpha, depth - 1, pos, info, TRUE);
+            }
+        }*/
+
         TakeMove(pos);
 
         if (info->stopped == TRUE)
@@ -274,6 +319,7 @@ static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO 
                     return beta;
                 }
                 alpha = score;
+                pvs = 0;
                 if (!(list->moves[MoveNum].move & MFLAGCAP))
                 {
                     pos->searchHistory[pos->pieces[FROMSQ(BestMove)]][TOSQ(BestMove)] += depth;
