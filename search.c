@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include "defs.h"
 
 static inline void CheckUp(S_SEARCHINFO *info)
@@ -9,8 +10,6 @@ static inline void CheckUp(S_SEARCHINFO *info)
     {
         info->stopped = TRUE;
     }
-
-    ReadInput(info);
 }
 
 static inline void PickNextMove(int movenum, S_MOVELIST *list)
@@ -50,7 +49,7 @@ static inline int IsRepetition(const S_BOARD *pos)
     return FALSE;
 }
 
-static inline void ClearForSearch(S_BOARD *pos, S_SEARCHINFO *info)
+static inline void ClearForSearch(S_BOARD *pos, S_SEARCHINFO *info, S_HASHTABLE *table)
 {
     int index = 0;
     int index2 = 0;
@@ -71,15 +70,18 @@ static inline void ClearForSearch(S_BOARD *pos, S_SEARCHINFO *info)
         }
     }
 
-    pos->HashTable->overWrite=0;
-	pos->HashTable->hit=0;
-	pos->HashTable->cut=0;
+    table->overWrite=0;
+	table->hit=0;
+	table->cut=0;
+    table->currentAge++;
+
 	pos->ply = 0;
 
 	info->stopped = 0;
 	info->nodes = 0;
 	info->fh = 0;
 	info->fhf = 0;
+
 }
 
 static inline int Quiescence(int alpha, int beta, S_BOARD *pos, S_SEARCHINFO *info)
@@ -158,7 +160,7 @@ static inline int Quiescence(int alpha, int beta, S_BOARD *pos, S_SEARCHINFO *in
     return alpha;
 }
 
-static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, int DoNull)
+static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, S_HASHTABLE *table, int DoNull)
 {
     ASSERT(CheckBoard(pos));
 
@@ -195,8 +197,8 @@ static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEAR
     int PvMove = NOMOVE;    
     int posEval = EvalPosition(pos);
 
-    if( ProbeHashEntry(pos, &PvMove, &score, alpha, beta, depth) == TRUE ) {
-		pos->HashTable->cut++;
+    if( ProbeHashEntry(pos, table, &PvMove, &score, alpha, beta, depth) == TRUE ) {
+		table->cut++;
 		return score;
 	}
 
@@ -210,7 +212,7 @@ static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEAR
         if ((pos->bigPiece[pos->side] > 1) && depth >= 4)
         {
             MakeNullMove(pos);
-            score = -AlphaBeta(-beta, -beta + 1, depth - 4, pos, info, FALSE);
+            score = -AlphaBeta(-beta, -beta + 1, depth - 4, pos, info, table, FALSE);
             TakeNullMove(pos);
             if (info->stopped == TRUE)
             {
@@ -260,7 +262,7 @@ static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEAR
             int reduction = LMRTable[MIN(depth, 64)][MAX(Legal, 63)];
             reduction = MIN(depth - 1, MAX(1, reduction));
 
-            score = -AlphaBeta(-alpha-1, -alpha, depth - reduction, pos, info, TRUE);
+            score = -AlphaBeta(-alpha-1, -alpha, depth - reduction, pos, info, table, TRUE);
 
             do_fullsearch = score > alpha && reduction != 1;
 
@@ -270,12 +272,12 @@ static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEAR
 
         // Full depth search on a null window
         if (do_fullsearch){
-            score = -AlphaBeta(-alpha-1, -alpha, depth - 1, pos, info, TRUE);
+            score = -AlphaBeta(-alpha-1, -alpha, depth - 1, pos, info, table, TRUE);
         }
 
         // Principal Variation Search (PVS)
         if (isPvNode && (Legal == 1 || score > alpha)){
-            score = -AlphaBeta(-beta, -alpha, depth - 1, pos, info, TRUE);
+            score = -AlphaBeta(-beta, -alpha, depth - 1, pos, info, table, TRUE);
         }
         
         /*if (pvs){
@@ -314,7 +316,7 @@ static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEAR
                         pos->searchKillers[0][pos->ply] = list->moves[MoveNum].move;
                     }
 
-                    StoreHashEntry(pos, BestMove, beta, HFBETA, depth);
+                    StoreHashEntry(pos,table, BestMove, beta, HFBETA, depth);
 
                     return beta;
                 }
@@ -342,15 +344,25 @@ static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEAR
 
     if (alpha != OldAlpha)
     {
-        StoreHashEntry(pos, BestMove, bestscore, HFEXACT, depth);
+        StoreHashEntry(pos, table, BestMove, bestscore, HFEXACT, depth);
     }else{
-        StoreHashEntry(pos, BestMove, bestscore, HFALPHA, depth);
+        StoreHashEntry(pos, table, BestMove, bestscore, HFALPHA, depth);
     }
 
     return alpha;
 }
 
-void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info)
+int SearchPosition_Thread(void *data){
+    S_SEARCH_THREAD_DATA *searchdata = (S_SEARCH_THREAD_DATA *)data;
+    S_BOARD *pos = malloc(sizeof(S_BOARD));
+    memcpy(pos, searchdata->originalPosition, sizeof(S_BOARD));
+    SearchPosition(pos, searchdata->info, searchdata->ttable);
+    free(pos);
+    printf("Freed\n");
+    return 0;
+}
+
+void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info, S_HASHTABLE *table)
 {
     // iterative deepening, search init
     CheckBoard(pos);
@@ -360,23 +372,21 @@ void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info)
     int currentDepth = 0;
     int pvMoves = 0;
     int pvNum = 0;
-    ClearForSearch(pos, info);
+    ClearForSearch(pos, info, table);
 
     for (currentDepth = 1; currentDepth <= info->depth; currentDepth++)
     {
-        bestscore = AlphaBeta(-INF_BOUND, INF_BOUND, currentDepth, pos, info, TRUE);
+        bestscore = AlphaBeta(-INF_BOUND, INF_BOUND, currentDepth, pos, info, table, TRUE);
         if (info->stopped == TRUE)
         {
             break;
         }
 
-        pvMoves = GetPvLine(currentDepth, pos);
+        pvMoves = GetPvLine(currentDepth, pos, table);
         bestmove = pos->PvArray[0];
 
-        printf("info score cp %d depth %d nodes %ld time %d ", bestscore, currentDepth, info->nodes, GetTimeMs() - info->starttime);
+        printf("info score cp %d depth %d nodes %ld time %d pv", bestscore, currentDepth, info->nodes, GetTimeMs() - info->starttime);
 
-        pvMoves = GetPvLine(currentDepth, pos);
-        printf("pv");
         for (pvNum = 0; pvNum < pvMoves; ++pvNum)
         {
             printf(" %s", PrMove(pos->PvArray[pvNum]));

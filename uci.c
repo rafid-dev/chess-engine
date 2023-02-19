@@ -1,9 +1,30 @@
+#include <string.h>
 #include "defs.h"
-#include "string.h"
+#include "tinycthread.h"
 
 #define INPUTBUFFER 400 * 6
 
-void ParseGo(char* line, S_SEARCHINFO *info, S_BOARD *pos) {
+thrd_t mainSearchThread;
+
+thrd_t LaunchSearchThread(S_BOARD *pos, S_SEARCHINFO *info, S_HASHTABLE *table){
+    S_SEARCH_THREAD_DATA *pSearchData = malloc(sizeof(S_SEARCH_THREAD_DATA));
+
+    pSearchData->originalPosition = pos;
+    pSearchData->info = info;
+    pSearchData->ttable = table;
+
+    thrd_t th;
+    thrd_create(&th, &SearchPosition_Thread, (void*)pSearchData);
+
+    return th;
+}
+
+void JoinSearchThread(S_SEARCHINFO* info){
+    info->stopped = TRUE;
+    thrd_join(mainSearchThread, NULL);
+}
+
+void ParseGo(char* line, S_SEARCHINFO *info, S_BOARD *pos, S_HASHTABLE *table) {
 
 	int depth = -1, movestogo = 30,movetime = -1;
 	int time = -1, inc = 0;
@@ -63,7 +84,8 @@ void ParseGo(char* line, S_SEARCHINFO *info, S_BOARD *pos) {
 
 	printf("time:%d start:%d stop:%d depth:%d timeset:%d\n",
 		time,info->starttime,info->stoptime,info->depth,info->timeset);
-	SearchPosition(pos, info);
+	//SearchPosition(pos, info, HashTable);
+    mainSearchThread = LaunchSearchThread(pos, info, table);
 }
 
 void ParsePosition(char* lineIn, S_BOARD* pos){
@@ -111,10 +133,10 @@ void Uci_Loop (){
 
     S_BOARD pos[1];
     S_SEARCHINFO info[1];
-    pos->HashTable->ptable = NULL;
+    HashTable->ptable = NULL;
     info->quit = 0;
     int MB = 64;
-    InitHashTable(pos->HashTable, MB);
+    InitHashTable(HashTable, MB);
 
     while (TRUE){
         memset(&line[0], 0,sizeof(line));
@@ -127,7 +149,7 @@ void Uci_Loop (){
         }
         if (!strncmp(line, "run", 3)){
             ParseFen(START_FEN, pos);
-            ParseGo("go infinite", info, pos);
+            ParseGo("go infinite", info, pos, HashTable);
         }else if (!strncmp(line, "eval", 4)){
             printf("%d\n", EvalPosition(pos));
         }else if (!strncmp(line, "print", 5)){
@@ -136,29 +158,46 @@ void Uci_Loop (){
             printf("readyok\n");
             continue;
         }else if (!strncmp(line, "position", 8)){
+
             ParsePosition(line, pos);
+
         }else if (!strncmp(line, "ucinewgame", 10)){
+
+            ClearHashTable(HashTable);
             ParsePosition("position startpos\n", pos);
+
         }else if (!strncmp(line, "go", 2)){
-            ParseGo(line, info, pos);
+            ParseGo(line, info, pos, HashTable);
         }else if (!strncmp(line, "quit", 4)){
+
             info->quit = TRUE;
+            JoinSearchThread(info);
+
             break;
+        }else if (!strncmp(line, "stop", 4)){
+
+            JoinSearchThread(info);
+
         }else if (!strncmp(line, "uci", 3)){
+
             printf("id name %s\n", NAME);
             printf("id author Slender\n");
+            printf("option name Hash type spin default 64 min 4 max %d\n",64);
             printf("uciok\n");
+
         } else if (!strncmp(line, "setoption name Hash value ", 26)) {			
+
 			sscanf(line,"%*s %*s %*s %*s %d",&MB);
 			if(MB < 4) MB = 4;
 			if(MB > 64) MB = 64;
 			printf("Set Hash to %d MB\n",MB);
-			InitHashTable(pos->HashTable, MB);
+			InitHashTable(HashTable, MB);
+
         }
         if (info->quit){
             break;
         }
     }
 
-    free(pos->HashTable->ptable);
+    free(HashTable->ptable);
 }
