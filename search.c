@@ -175,7 +175,7 @@ static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEAR
     }
     
 
-    if (IsRepetition(pos) || pos->fiftyMove >= 100 && pos->ply)
+    if ((IsRepetition(pos) || pos->fiftyMove >= 100) && pos->ply)
     {
         return 0;
     }
@@ -201,9 +201,9 @@ static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEAR
     if (!InCheck)
         ss->eval = posEval;
     
-    bool improving = !InCheck && posEval > (ss-2)->eval;
+    bool improving = !InCheck && posEval > (ss-1)->eval;
 
-    if( ProbeHashEntry(pos, table, &PvMove, &score, alpha, beta, depth) == TRUE ) {
+    if(ProbeHashEntry(pos, table, &PvMove, &score, alpha, beta, depth) == TRUE ) {
 		table->cut++;
 		return score;
 	}
@@ -236,9 +236,12 @@ static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEAR
 
     int MoveNum = 0;
     int MovesSearched = 0;
+    int quietsSearched = 0;
     int OldAlpha = alpha;
     int BestMove = NOMOVE;
     int bestscore = -INF_BOUND;
+    int LMPCount = depth * 8;
+
     score = -INF_BOUND;
 
     if( PvMove != NOMOVE) {
@@ -255,15 +258,15 @@ static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEAR
 
         int skipQuiets = FALSE;
         int isQuiet = !(list->moves[MoveNum].move & MFLAGCAP);
-        // Late move pruning
-        if (!isRoot && depth <= 4 && MovesSearched > depth*8){
-            skipQuiets = TRUE;
-        }
 
-        if (skipQuiets && isQuiet){
+        // Late Move Pruning/Movecount pruning
+        if (!isRoot && !isPvNode && isQuiet && !InCheck && depth < 6 && (quietsSearched > depth*8)){
+            skipQuiets = TRUE;
             continue;
         }
 
+        if (isQuiet && skipQuiets)continue;
+        
         if (!MakeMove(pos, list->moves[MoveNum].move))
         {
             continue;
@@ -271,6 +274,11 @@ static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEAR
 
         info->nodes++;
         MovesSearched++;
+        
+        if (isQuiet){
+            quietsSearched++;
+        }
+
         int move = list->moves[MoveNum].move;
         int do_fullsearch = FALSE;
         int histScore = pos->searchHistory[pos->pieces[FROMSQ(move)]][TOSQ(move)];
@@ -301,7 +309,7 @@ static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEAR
 
         TakeMove(pos);
 
-        if (info->stopped == TRUE)
+        if (!isRoot && info->stopped == TRUE)
         {
             return 0;
         }
@@ -337,6 +345,9 @@ static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEAR
                 }
             }
         }
+        if (isRoot && info->stopped == TRUE){
+            break;
+        }
     }
 
     if (MovesSearched == 0)
@@ -367,7 +378,6 @@ int SearchPosition_Thread(void *data){
     memcpy(pos, searchdata->originalPosition, sizeof(S_BOARD));
     SearchPosition(pos, searchdata->info, searchdata->ttable);
     free(pos);
-    printf("Freed\n");
     return 0;
 }
 
@@ -397,8 +407,8 @@ void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info, S_HASHTABLE *table)
         pvMoves = GetPvLine(currentDepth, pos, table);
         bestmove = pos->PvArray[0];
 
-        printf("info score cp %d depth %d nodes %ld time %d pv", bestscore, currentDepth, info->nodes, GetTimeMs() - info->starttime);
-
+        printf("info score cp %d depth %d nodes %ld time %d ", bestscore, currentDepth, info->nodes, GetTimeMs() - info->starttime);
+        printf("pv");
         for (pvNum = 0; pvNum < pvMoves; ++pvNum)
         {
             printf(" %s", PrMove(pos->PvArray[pvNum]));

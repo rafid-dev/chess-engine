@@ -74,7 +74,10 @@ void ParseGo(char* line, S_SEARCHINFO *info, S_BOARD *pos, S_HASHTABLE *table) {
 	if(time != -1) {
 		info->timeset = TRUE;
 		time /= movestogo;
-		time -= 50;
+        
+        // Hack to fix illegal move (empty move)
+		if (time > 1500) time -= 50;
+
 		info->stoptime = info->starttime + time + inc;
 	}
 
