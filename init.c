@@ -29,6 +29,7 @@ U64 WhitePassedMask[64];
 U64 IsolatedMask[64];
 
 int LMRTable[MAXDEPTH][MAXDEPTH];
+int LateMovePruningCounts[2][9];
 
 void InitEvalMasks(){
 	int sq, tsq, r, f;
@@ -186,6 +187,12 @@ void InitSearch()
         {
             LMRTable[depth][played] = 0.75 + log(depth) * log(played) / 2.25;
         }
+    }
+
+	// Init late move pruning table
+	for (int depth = 1; depth < 9; depth++) {
+        LateMovePruningCounts[0][depth] = 2.5 + 2 * depth * depth / 4.5;
+        LateMovePruningCounts[1][depth] = 4.0 + 4 * depth * depth / 4.5;
     }
 }
 

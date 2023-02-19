@@ -152,6 +152,8 @@ void Uci_Loop (){
             ParseGo("go infinite", info, pos, HashTable);
         }else if (!strncmp(line, "eval", 4)){
             printf("%d\n", EvalPosition(pos));
+        }else if (!strncmp(line, "perft", 5)){
+            PerftTest(5, pos);
         }else if (!strncmp(line, "print", 5)){
 	        PrintBoard(pos);
         }else if (!strncmp(line, "isready", 7)){

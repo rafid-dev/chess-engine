@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 //#define DEBUG
 #ifndef DEBUG
@@ -24,7 +25,7 @@
 
 typedef unsigned long long U64;
 
-#define NAME "Rice 1.1"
+#define NAME "Rice LMP"
 #define BRD_SQ_NUM 120
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
@@ -34,9 +35,10 @@ typedef unsigned long long U64;
 #define MAXGAMEMOVES 2028
 #define MAXPOSITIONMOVES 256
 #define MAXDEPTH 64
+#define MAXPLY 64
 
 #define INF_BOUND 30000
-#define ISMATE (INF_BOUND - MAXDEPTH)
+#define ISMATE 29000
 
 #define MIN(a,b)(((a) < (b)) ? (a) : (b))
 #define MAX(a,b)(((a) > (b)) ? (a) : (b))
@@ -162,6 +164,10 @@ typedef struct {
     S_HASHTABLE *ttable;
 }S_SEARCH_THREAD_DATA;
 
+typedef struct {
+    int eval;
+}S_STACK;
+
 /* GAME MOVE */
 
 /*
@@ -244,6 +250,8 @@ extern U64 WhitePassedMask[64];
 extern U64 IsolatedMask[64];
 
 extern int LMRTable[MAXDEPTH][MAXDEPTH];
+extern int LateMovePruningCounts[2][9];
+
 extern S_HASHTABLE HashTable[1];
 /* FUNCTIONS */
 

@@ -3,12 +3,6 @@
 
 S_HASHTABLE HashTable[1];
 
-// Alterantive to % (Modulo) operator. 4x faster.
-uint32_t reduce(uint32_t x, uint32_t N)
-{
-    return ((uint64_t)x * (uint64_t)N) >> 32;
-}
-
 int GetPvLine(const int depth, S_BOARD *pos, const S_HASHTABLE* table)
 {
 
@@ -129,7 +123,7 @@ void StoreHashEntry(S_BOARD *pos, S_HASHTABLE* table, const int move, int score,
 int ProbeHashEntry(S_BOARD *pos, S_HASHTABLE* table, int *move, int *score, int alpha, int beta, int depth)
 {
 
-    int index = pos->posKey % table->numEntries;
+    int index =pos->posKey % table->numEntries;
 
     ASSERT(index >= 0 && index <= table->numEntries - 1);
     ASSERT(depth >= 1 && depth < MAXDEPTH);
