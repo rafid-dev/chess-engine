@@ -30,7 +30,7 @@ int GetPvLine(const int depth, S_BOARD *pos, const S_HASHTABLE* table)
 
     while (pos->ply > 0)
     {
-        TakeMove(pos);
+        TakeMove(pos, move);
     }
 
     return count;
@@ -120,7 +120,7 @@ void StoreHashEntry(S_BOARD *pos, S_HASHTABLE* table, const int move, int score,
     table->ptable[index].age = table->currentAge;
 }
 
-int ProbeHashEntry(S_BOARD *pos, S_HASHTABLE* table, int *move, int *score, int alpha, int beta, int depth)
+int ProbeHashEntry(S_BOARD *pos, S_HASHTABLE* table, int *move, int *score, int *flag, int *tteDepth, int alpha, int beta, int depth)
 {
 
     int index =pos->posKey % table->numEntries;
@@ -135,6 +135,8 @@ int ProbeHashEntry(S_BOARD *pos, S_HASHTABLE* table, int *move, int *score, int 
     if (table->ptable[index].posKey == pos->posKey)
     {
         *move = table->ptable[index].move;
+        *flag = table->ptable[index].flags;
+        *tteDepth = table->ptable[index].depth;
         if (table->ptable[index].depth >= depth)
         {
             table->hit++;
@@ -143,6 +145,7 @@ int ProbeHashEntry(S_BOARD *pos, S_HASHTABLE* table, int *move, int *score, int 
             ASSERT(table->ptable[index].flags >= HFALPHA && table->ptable[index].flags <= HFEXACT);
 
             *score = table->ptable[index].score;
+            
             if (*score > ISMATE)
                 *score -= pos->ply;
             else if (*score < -ISMATE)

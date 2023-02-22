@@ -9,6 +9,7 @@ const int QueenOpenFile = 5;
 const int QueenSemiOpenFile = 3;
 const int BishopPair = 30;
 
+
 int MaterialDraw(const S_BOARD *pos) {
 	
     if (!pos->pceNum[wR] && !pos->pceNum[bR] && !pos->pceNum[wQ] && !pos->pceNum[bQ]) {

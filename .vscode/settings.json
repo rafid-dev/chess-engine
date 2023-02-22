@@ -5,6 +5,7 @@
         "defs.h": "c",
         "string.h": "c",
         "unistd.h": "c",
-        "time.h": "c"
+        "time.h": "c",
+        "type_traits": "c"
     }
 }

@@ -154,10 +154,18 @@ void ResetBoard(S_BOARD *pos) {
 		pos->pceNum[index] = 0;
 	}
 
+	for (index = 0; index < 13;++index){
+		pos->bitboards[index] = 0ULL;
+	}
+
+	pos->occupancies[WHITE] = 0ULL;
+	pos->occupancies[BLACK] = 0ULL;
+	pos->occupancies[BOTH] = 0ULL;
+
 	pos->KingSq[WHITE] = pos->KingSq[BLACK] = NO_SQ;
 
 	pos->side = BOTH;
-	pos->enPas = NO_SQ;
+	pos->enPas = no_sq;
 	pos->fiftyMove = 0;
 
 	pos->ply = 0;
@@ -168,20 +176,35 @@ void ResetBoard(S_BOARD *pos) {
 	pos->posKey = 0ULL;
 }
 
+char ascii_pieces[13] = ".PNBRQKpnbrqk";
+
 void PrintBoard(const S_BOARD *pos) {
 	int sq, file, rank, piece;
 
 	printf("\nGame Board:\n\n");
 
-	for(rank = RANK_8; rank >= RANK_1; rank--) {
-		printf("%d  ", rank + 1);
-		for(file = FILE_A; file <= FILE_H; file++) {
-			sq = FR2SQ(file, rank);
-			piece = pos->pieces[sq];
-			printf("%3c", PceChar[piece]);
-		}
-		printf("\n");
-	}
+    for (int rank = 0; rank < 8; rank++)
+    {
+        for (int file = 0; file < 8; file++)
+        {
+            int square = rank * 8 + file;
+            
+            if (!file)
+                printf("  %d ", 8 - rank);
+            
+            int piece = -1;
+            
+            for (int bb_piece = wP; bb_piece <= bK; bb_piece++)
+            {
+                if (GETBIT(pos->bitboards[bb_piece], square))
+                    piece = bb_piece;
+            }
+            
+            printf(" %c ", (piece == -1) ? '.' : ascii_pieces[piece]);
+        }	
+        
+        printf("\n");
+    }
 
 	printf("\n   ");
 	for(file = FILE_A; file <= FILE_H; file++)
@@ -199,7 +222,7 @@ void PrintBoard(const S_BOARD *pos) {
 	printf("PosKey:%0llx\n", pos->posKey);
 }
 
-int ParseFen(char *fen, S_BOARD *pos) {
+/*int ParseFen(char *fen, S_BOARD *pos) {
 
 	ASSERT(fen!=NULL);
 	ASSERT(pos!=NULL);
@@ -302,7 +325,7 @@ int ParseFen(char *fen, S_BOARD *pos) {
 	UpdateListsMaterial(pos);
 
 	return 0;
-}
+}*/
 
 void MirrorBoard(S_BOARD *pos) {
 
@@ -345,4 +368,140 @@ void MirrorBoard(S_BOARD *pos) {
 	UpdateListsMaterial(pos);
 
     ASSERT(CheckBoard(pos));
+}
+
+int char_pieces[] = {
+    ['P'] = wP,
+    ['N'] = wN,
+    ['B'] = wB,
+    ['R'] = wR,
+    ['Q'] = wQ,
+    ['K'] = wK,
+    ['p'] = bP,
+    ['n'] = bN,
+    ['b'] = bR,
+    ['r'] = bR,
+    ['q'] = bQ,
+    ['k'] = bK
+};
+
+int ParseFen(char *fen, S_BOARD *pos){
+	ResetBoard(pos);
+
+	 for (int rank = 0; rank < 8; rank++)
+    {
+        // loop over board files
+        for (int file = 0; file < 8; file++)
+        {
+            // init current square
+            int square = rank * 8 + file;
+            
+            // match ascii pieces within FEN string
+            if ((*fen >= 'a' && *fen <= 'z') || (*fen >= 'A' && *fen <= 'Z'))
+            {
+                // init piece type
+                int piece = char_pieces[*fen];
+                
+                // set piece on corresponding bitboard
+                SETBIT(pos->bitboards[piece], square);
+                
+                // increment pointer to FEN string
+                fen++;
+            }
+            
+            // match empty square numbers within FEN string
+            if (*fen >= '0' && *fen <= '9')
+            {
+                // init offset (convert char 0 to int 0)
+                int offset = *fen - '0';
+                
+                // define piece variable
+                int piece = -1;
+                
+                // loop over all piece bitboards
+                for (int bb_piece = wP; bb_piece <= bK; ++bb_piece)
+                {
+                    // if there is a piece on current square
+                    if (GETBIT(pos->bitboards[bb_piece], square)){
+                        // get piece code
+                        piece = bb_piece;
+						pos->pieces[square] = piece;
+					}
+                }
+                
+                // on empty current square
+                if (piece == -1)
+                    // decrement file
+                    file--;
+                
+                // adjust file counter
+                file += offset;
+                
+                // increment pointer to FEN string
+                fen++;
+            }
+            
+            // match rank separator
+            if (*fen == '/')
+                // increment pointer to FEN string
+                fen++;
+        }
+    }
+    
+    // got to parsing side to move (increment pointer to FEN string)
+    fen++;
+    
+    // parse side to move
+    (*fen == 'w') ? (pos->side = WHITE) : (pos->side = BLACK);
+    
+    // go to parsing castling rights
+    fen += 2;
+    
+    // parse castling rights
+    while (*fen != ' ')
+    {
+        switch (*fen)
+        {
+            case 'K': pos->castlePerm |= WKCA; break;
+            case 'Q': pos->castlePerm |= WQCA; break;
+            case 'k': pos->castlePerm |= BKCA; break;
+            case 'q': pos->castlePerm |= BQCA; break;
+            case '-': break;
+        }
+
+        // increment pointer to FEN string
+        fen++;
+    }
+    
+    // got to parsing enpassant square (increment pointer to FEN string)
+    fen++;
+
+	// parse enpassant square
+    if (*fen != '-')
+    {
+        // parse enpassant file & rank
+        int file = fen[0] - 'a';
+        int rank = 8 - (fen[1] - '0');
+        
+        // init enpassant square
+        pos->enPas = rank * 8 + file;
+    }    
+    else{
+        pos->enPas = no_sq;
+	}
+
+	for (int piece = wP; piece <= wK; ++piece){
+        pos->occupancies[WHITE] |= pos->bitboards[piece];
+	}
+
+	for (int piece = bP; piece <= bK; ++piece){
+        pos->occupancies[BLACK] |= pos->bitboards[piece];
+	}
+
+	pos->occupancies[BOTH] |= pos->occupancies[WHITE];
+    pos->occupancies[BOTH] |= pos->occupancies[BLACK];
+
+    pos->posKey = GeneratePosKey(pos);
+
+	return 0;
 }

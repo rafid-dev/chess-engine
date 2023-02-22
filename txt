@@ -1,0 +1,96 @@
+a2a3: 1
+b2b3: 1
+g2g3: 1
+d5d6: 1
+a2a4: 1
+g2g4: 1
+g2h3: 1
+d5e6: 1
+c3b1: 1
+c3d1: 1
+c3a4: 1
+c3b5: 1
+e5d3: 1
+e5c4: 1
+e5g4: 1
+e5c6: 1
+e5g6: 1
+e5d7: 1
+e5f7: 1
+d2c1: 1
+d2e3: 1
+d2f4: 1
+d2g5: 1
+d2h6: 1
+e2d1: 1
+e2f1: 1
+e2d3: 1
+e2c4: 1
+e2b5: 1
+e2a6: 1
+a1b1: 1
+a1c1: 1
+a1d1: 1
+h1f1: 1
+h1g1: 1
+f3d3: 1
+f3e3: 1
+f3g3: 1
+f3h3: 1
+f3f4: 1
+f3g4: 1
+f3f5: 1
+f3h5: 1
+f3f6: 1
+e1d1: 1
+e1f1: 1
+e1g1: 1
+e1c1: 1
+
+Move:1 > d5e6 (score:1000000)    
+Move:2 > g2h3 (score:1000000)    
+Move:3 > e5d7 (score:1000000)    
+Move:4 > e5f7 (score:1000000)    
+Move:5 > e5g6 (score:1000000)    
+Move:6 > e2a6 (score:1000000)    
+Move:7 > f3f6 (score:1000000)    
+Move:8 > f3h3 (score:1000000)    
+Move:9 > d5d6 (score:32760)      
+Move:10 > d2h6 (score:7)
+Move:11 > e5c6 (score:-747948520)
+Move:12 > b2b3 (score:0)
+Move:13 > e5c4 (score:0)
+Move:14 > e5g4 (score:0)
+Move:15 > e5d3 (score:0)
+Move:16 > c3b5 (score:0)
+Move:17 > c3a4 (score:0)
+Move:18 > c3b1 (score:0)
+Move:19 > c3d1 (score:0)
+Move:20 > a2a4 (score:0)
+Move:21 > d2g5 (score:0)
+Move:22 > d2f4 (score:0)
+Move:23 > d2e3 (score:0)
+Move:24 > d2c1 (score:0)
+Move:25 > g2g3 (score:0)
+Move:26 > e2b5 (score:0)
+Move:27 > e2c4 (score:0)
+Move:28 > e2d3 (score:0)
+Move:29 > e2d1 (score:0)
+Move:30 > e2f1 (score:0)
+Move:31 > a1b1 (score:0)
+Move:32 > a1c1 (score:0)
+Move:33 > a1d1 (score:0)
+Move:34 > h1f1 (score:0)
+Move:35 > h1g1 (score:-710152588)
+Move:36 > g2g4 (score:0)
+Move:37 > f3f5 (score:0)
+Move:38 > f3h5 (score:0)
+Move:39 > f3f4 (score:0)
+Move:40 > f3g4 (score:0)
+Move:41 > f3d3 (score:0)
+Move:42 > f3e3 (score:0)
+Move:43 > f3g3 (score:0)
+Move:44 > a2a3 (score:0)
+Move:45 > e1g1 (score:0)
+Move:46 > e1c1 (score:0)
+MoveList Total 46 Moves:

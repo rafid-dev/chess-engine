@@ -85,3 +85,35 @@ int SqAttacked(const int sq, const int side, const S_BOARD *pos) {
 	return FALSE;
 	
 }
+
+int IsSquareAttackedBB(int square, int side, const S_BOARD *pos){
+    if ((side == WHITE) && (pawn_attacks[BLACK][square] & pos->bitboards[wP])) { 
+
+		return 1;
+	}
+    if ((side == BLACK) && (pawn_attacks[WHITE][square] & pos->bitboards[bP])) {
+		return 1;
+	}
+    
+    if (knight_attacks[square] & ((side == WHITE) ? pos->bitboards[wN] : pos->bitboards[bN])){ 
+		return 1;
+	}
+    
+    if (GetBishopAttacks(square, pos->occupancies[BOTH]) & ((side == WHITE) ? pos->bitboards[wB] : pos->bitboards[bB]))  {
+		
+		return 1;
+	}
+
+    if (GetRookAttacks(square, pos->occupancies[BOTH]) & ((side == WHITE) ? pos->bitboards[wR] : pos->bitboards[bR])) {
+		return 1;
+	}    
+
+    if (GetQueenAttacks(square, pos->occupancies[BOTH]) & ((side == WHITE) ? pos->bitboards[wQ] : pos->bitboards[bQ]))  {
+		return 1;
+	}
+    
+    if (king_attacks[square] & ((side == WHITE) ? pos->bitboards[wK] : pos->bitboards[bK])){
+		return 1;
+	}
+    return 0;
+}

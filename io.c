@@ -14,12 +14,12 @@ char *PrMove(const int move) {
 
 	static char MvStr[6];
 
-	int ff = FilesBrd[FROMSQ(move)];
-	int rf = RanksBrd[FROMSQ(move)];
-	int ft = FilesBrd[TOSQ(move)];
-	int rt = RanksBrd[TOSQ(move)];
+	int ff = FilesBrd[get_move_source(move)];
+	int rf = RanksBrd[get_move_source(move)];
+	int ft = FilesBrd[get_move_target(move)];
+	int rt = RanksBrd[get_move_target(move)];
 
-	int promoted = PROMOTED(move);
+	int promoted = get_move_promoted(move);
 
 	if(promoted) {
 		char pchar = 'q';
@@ -30,9 +30,9 @@ char *PrMove(const int move) {
 		} else if(!IsRQ(promoted) && IsBQ(promoted))  {
 			pchar = 'b';
 		}
-		sprintf(MvStr, "%c%c%c%c%c", ('a'+ff), ('1'+rf), ('a'+ft), ('1'+rt), pchar);
+		sprintf(MvStr, "%s%s%c", square_to_coordinates[get_move_source(move)], square_to_coordinates[get_move_target(move)], pchar);
 	} else {
-		sprintf(MvStr, "%c%c%c%c", ('a'+ff), ('1'+rf), ('a'+ft), ('1'+rt));
+		sprintf(MvStr, "%s%s", square_to_coordinates[get_move_source(move)], square_to_coordinates[get_move_target(move)]);
 	}
 
 	return MvStr;
@@ -58,8 +58,8 @@ int ParseMove (char *ptrChar, S_BOARD *pos){
 	for (MoveNum = 0; MoveNum < list->count; ++MoveNum){
 		Move = list->moves[MoveNum].move;
 
-		if (FROMSQ(Move) == from && TOSQ(Move) == to){
-			PromPce = PROMOTED(Move);
+		if (get_move_source(Move) == from && get_move_target(Move) == to){
+			PromPce = get_move_promoted(Move);
 			if (PromPce != EMPTY){
 				if (IsRQ(PromPce) && !IsBQ(PromPce) && ptrChar[4] == 'r'){
 					return Move;

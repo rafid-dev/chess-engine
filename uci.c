@@ -131,14 +131,14 @@ void Uci_Loop (){
     char line[INPUTBUFFER];
     printf("id name %s\n", NAME);
     printf("id author Slender\n");
-    printf("option name Hash type spin default 64 min 4 max %d\n",64);
+    printf("option name Hash type spin default 16 min 4 max %d\n",64);
     printf("uciok\n");
 
     S_BOARD pos[1];
     S_SEARCHINFO info[1];
     HashTable->ptable = NULL;
     info->quit = 0;
-    int MB = 64;
+    int MB = 16;
     InitHashTable(HashTable, MB);
 
     while (TRUE){
@@ -187,7 +187,7 @@ void Uci_Loop (){
 
             printf("id name %s\n", NAME);
             printf("id author Slender\n");
-            printf("option name Hash type spin default 64 min 4 max %d\n",64);
+            printf("option name Hash type spin default 16 min 4 max %d\n",16);
             printf("uciok\n");
 
         } else if (!strncmp(line, "setoption name Hash value ", 26)) {			

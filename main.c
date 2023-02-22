@@ -5,7 +5,12 @@ int main (){
 
     AllInit();
 
-    Uci_Loop();
+    S_BOARD pos[1];
+
+    ParseFen(START_FEN, pos);
+
+    PerftTest(4, pos);
+    //Uci_Loop();
 
     
     return 0;
