@@ -1,6 +1,7 @@
 #include <time.h>
 #include <math.h>
 #include "defs.h"
+#include "random.h"
 
 #define RAND_64	((U64)rand() | \
 					((U64) rand() << 15) | \
@@ -14,9 +15,10 @@ int Sq64ToSq120[64];
 U64 SetMask[64];
 U64 ClearMask[64];
 
-U64 PieceKeys[13][120];
+U64 PieceKeys[13][64];
 U64 SideKey;
 U64 CastleKeys[16];
+U64 EnpassantKeys[64];
 
 int FilesBrd[BRD_SQ_NUM];
 int RanksBrd[BRD_SQ_NUM];
@@ -30,6 +32,17 @@ U64 IsolatedMask[64];
 
 int LMRTable[MAXDEPTH][MAXDEPTH];
 int LateMovePruningCounts[2][9];
+
+char *square_to_coordinates[] = {
+    "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
+    "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
+    "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
+    "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
+    "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
+    "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
+    "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
+    "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
+};
 
 void InitEvalMasks(){
 	int sq, tsq, r, f;
@@ -127,15 +140,17 @@ void InitHashKeys() {
 	int index = 0;
 	int index2 = 0;
 	for(index = 0; index < 13; ++index) {
-		for(index2 = 0; index2 < 120; ++index2) {
-			PieceKeys[index][index2] = RAND_64;
+		for(index2 = 0; index2 < 64; ++index2) {
+			PieceKeys[index][index2] = get_random_U64_number();
 		}
 	}
-	SideKey = RAND_64;
+	SideKey = get_random_U64_number();
 	for(index = 0; index < 16; ++index) {
-		CastleKeys[index] = RAND_64;
+		CastleKeys[index] = get_random_U64_number();
 	}
-
+    for (index = 0; index < 64; ++index){
+        EnpassantKeys[index] = get_random_U64_number();
+    }
 }
 
 void InitBitMasks() {
@@ -197,6 +212,8 @@ void InitSearch()
 }
 
 
+int PieceToPieceColor[13] = {EMPTY, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, BLACK, BLACK, BLACK, BLACK, BLACK, BLACK};
+char* PieceToPieceString[13] = {"EMPTY", "WHITE PAWN", "WHITE KNIGHT", "WHITE BISHOP", "WHITE ROOK", "WHITE QUEEN", "WHITE KING", "BLACK PAWN", "BLACK KNIGHT", "BLACK BISHOP", "BLACK ROOK", "BLACK QUEEN", "BLACK KING"};
 void AllInit(){
     InitSq120To64();
     InitBitMasks();
@@ -206,4 +223,7 @@ void AllInit(){
 	InitMvvlva();
 	InitSearch();
 	init_tables();
+    init_sliders_attacks(0);
+    init_sliders_attacks(1);
+    init_leapers_attacks();
 }

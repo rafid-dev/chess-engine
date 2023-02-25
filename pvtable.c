@@ -18,7 +18,7 @@ int GetPvLine(const int depth, S_BOARD *pos, const S_HASHTABLE* table)
 
         if (MoveExists(pos, move))
         {
-            MakeMove(pos, move);
+            make_move(pos, move);
             pos->PvArray[count++] = move;
         }
         else
@@ -30,7 +30,7 @@ int GetPvLine(const int depth, S_BOARD *pos, const S_HASHTABLE* table)
 
     while (pos->ply > 0)
     {
-        TakeMove(pos);
+        take_move(pos);
     }
 
     return count;
@@ -120,7 +120,7 @@ void StoreHashEntry(S_BOARD *pos, S_HASHTABLE* table, const int move, int score,
     table->ptable[index].age = table->currentAge;
 }
 
-int ProbeHashEntry(S_BOARD *pos, S_HASHTABLE* table, int *move, int *score, int alpha, int beta, int depth)
+int ProbeHashEntry(S_BOARD *pos, S_HASHTABLE* table, int *move, int *score, int *ttflag, int *ttdepth, int alpha, int beta, int depth)
 {
 
     int index =pos->posKey % table->numEntries;
@@ -135,6 +135,8 @@ int ProbeHashEntry(S_BOARD *pos, S_HASHTABLE* table, int *move, int *score, int 
     if (table->ptable[index].posKey == pos->posKey)
     {
         *move = table->ptable[index].move;
+        *ttdepth = table->ptable[index].depth;
+        *ttflag = table->ptable[index].flags;
         if (table->ptable[index].depth >= depth)
         {
             table->hit++;

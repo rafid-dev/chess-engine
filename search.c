@@ -57,7 +57,7 @@ static inline void ClearForSearch(S_BOARD *pos, S_SEARCHINFO *info, S_HASHTABLE 
 
     for (index = 0; index < 13; ++index)
     {
-        for (index2 = 0; index2 < BRD_SQ_NUM; ++index2)
+        for (index2 = 0; index2 < 64; ++index2)
         {
             pos->searchHistory[index][index2] = 0;
         }
@@ -86,7 +86,6 @@ static inline void ClearForSearch(S_BOARD *pos, S_SEARCHINFO *info, S_HASHTABLE 
 
 static inline int Quiescence(int alpha, int beta, S_BOARD *pos, S_SEARCHINFO *info)
 {
-    ASSERT(CheckBoard(pos));
 
     if ((info->nodes & 2047) == 0)
     {
@@ -117,7 +116,7 @@ static inline int Quiescence(int alpha, int beta, S_BOARD *pos, S_SEARCHINFO *in
     }
 
     S_MOVELIST list[1];
-    GenerateAllCaps(pos, list);
+    generate_capture_moves(list, pos);
 
     // int MoveNum = 0;
     int MovesSearched = 0;
@@ -127,15 +126,17 @@ static inline int Quiescence(int alpha, int beta, S_BOARD *pos, S_SEARCHINFO *in
 
     for (int MoveNum = 0; MoveNum < list->count; ++MoveNum)
     {
+        ASSERT(get_move_capture(list->moves[MoveNum].move));
         PickNextMove(MoveNum, list);
-        if (!MakeMove(pos, list->moves[MoveNum].move))
+        if (!make_move(pos, list->moves[MoveNum].move))
         {
+            take_move(pos);
             continue;
         }
         info->nodes++;
         MovesSearched++;
         score = -Quiescence(-beta, -alpha, pos, info);
-        TakeMove(pos, list->moves[MoveNum].move);
+        take_move(pos);
 
         if (info->stopped == TRUE)
         {
@@ -163,7 +164,6 @@ static inline int Quiescence(int alpha, int beta, S_BOARD *pos, S_SEARCHINFO *in
 
 static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, S_HASHTABLE *table, S_STACK *ss, int DoNull)
 {
-    ASSERT(CheckBoard(pos));
 
     if (depth == 0)
     {
@@ -185,7 +185,7 @@ static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEAR
         return EvalPosition(pos);
     }
 
-    int InCheck = SqAttacked(pos->KingSq[pos->side], pos->side ^ 1, pos);
+    int InCheck = (is_square_attacked((pos->side == WHITE) ? get_ls1b_index(pos->bitboards[wK]) : get_ls1b_index(pos->bitboards[bK]), pos->side^1, pos));
 
     if (InCheck == TRUE)
     {
@@ -206,9 +206,8 @@ static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEAR
         ss->eval = posEval;
     
     bool improving = !InCheck && posEval > (ss-1)->eval;
-    
 
-    if(!excluded && ProbeHashEntry(pos, table, &PvMove, &ttescore, &tteflag, &tteDepth, alpha, beta, depth) == TRUE ) {
+    if(!isRoot && !excluded && ProbeHashEntry(pos, table, &PvMove, &ttescore, &tteflag, &tteDepth, alpha, beta, depth) == TRUE ) {
 		table->cut++;
 		return ttescore;
 	}
@@ -220,7 +219,7 @@ static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEAR
             return posEval;
         }
         /* NULL Move Pruning (NMP) */
-        if ((pos->bigPiece[pos->side] > 1) && depth >= 4)
+        if (depth >= 4)
         {
             MakeNullMove(pos);
             score = -AlphaBeta(-beta, -beta + 1, depth - 4, pos, info, table, ss, FALSE);
@@ -237,7 +236,7 @@ static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEAR
     }
 
     S_MOVELIST list[1];
-    GenerateAllMoves(pos, list);
+    generate_moves(list, pos);
 
     int MoveNum = 0;
     int MovesSearched = 0;
@@ -291,8 +290,9 @@ static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEAR
         }
 
         int newDepth = depth + extension;
-        if (!MakeMove(pos, move))
+        if (!make_move(pos, move))
         {
+            take_move(pos);
             continue;
         }
 
@@ -305,7 +305,6 @@ static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEAR
         }
 
         int do_fullsearch = FALSE;
-        int histScore = pos->searchHistory[pos->pieces[FROMSQ(move)]][TOSQ(move)];
 
         // Late Move Reduction (LMR)
         if (!InCheck && depth >= 3 && MovesSearched >= 5 && isQuiet){
@@ -331,7 +330,7 @@ static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEAR
             score = -AlphaBeta(-beta, -alpha, newDepth - 1, pos, info, table, ss, TRUE);
         }
 
-        TakeMove(pos, move);
+        take_move(pos);
 
         if (!isRoot && info->stopped == TRUE)
         {
@@ -365,11 +364,11 @@ static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEAR
                 alpha = score;
                 if (isQuiet)
                 {
-                    pos->searchHistory[pos->pieces[FROMSQ(BestMove)]][TOSQ(BestMove)] += depth;
+                    pos->searchHistory[pos->pieces[get_move_source(BestMove)]][get_move_target(BestMove)] += depth;
                 }
             }
         }
-        if (isRoot && info->stopped == TRUE){
+        if (isRoot && info->stopped == TRUE && BestMove != NOMOVE){
             break;
         }
     }
@@ -405,7 +404,6 @@ int SearchPosition_Thread(void *data){
 void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info, S_HASHTABLE *table)
 {
     // iterative deepening, search init
-    CheckBoard(pos);
 
     S_STACK stack[MAXPLY+10];
     S_STACK *ss = stack+7;
@@ -415,11 +413,13 @@ void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info, S_HASHTABLE *table)
     int currentDepth = 0;
     int pvMoves = 0;
     int pvNum = 0;
+    ASSERT(pos->hisPly >= pos->fiftyMove);
     ClearForSearch(pos, info, table);
 
     for (currentDepth = 1; currentDepth <= info->depth; currentDepth++)
     {
         bestscore = AlphaBeta(-INF_BOUND, INF_BOUND, currentDepth, pos, info, table, ss, TRUE);
+
         if (info->stopped == TRUE)
         {
             break;

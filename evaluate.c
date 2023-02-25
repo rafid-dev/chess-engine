@@ -187,11 +187,23 @@ int* eg_pesto_table[6] =
 int mg_value[6] = {82, 337, 365, 477, 1025,  0};
 int eg_value[6] = {94, 281, 297, 512,  936,  0};
 
-int PieceToPieceType[12] = {PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING};
+int PieceToPieceType[13] = {EMPTY, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING};
 
 int gamephaseInc[12] = {0,0,1,1,1,1,2,2,4,4,0,0};
 int mg_table[12][64];
 int eg_table[12][64];
+
+const int mirror_square[64] =
+{
+	a1, b1, c1, d1, e1, f1, g1, h1,
+	a2, b2, c2, d2, e2, f2, g2, h2,
+	a3, b3, c3, d3, e3, f3, g3, h3,
+	a4, b4, c4, d4, e4, f4, g4, h4,
+	a5, b5, c5, d5, e5, f5, g5, h5,
+	a6, b6, c6, d6, e6, f6, g6, h6,
+	a7, b7, c7, d7, e7, f7, g7, h7,
+	a8, b8, c8, d8, e8, f8, g8, h8
+};
 
 void init_tables()
 {
@@ -200,8 +212,8 @@ void init_tables()
         for (int PIECE = PAWN; PIECE <= KING; PIECE++){
             mg_table[PIECE+6][sq] = mg_value[PIECE] + mg_pesto_table[PIECE][sq];
             eg_table[PIECE+6][sq] = eg_value[PIECE] + eg_pesto_table[PIECE][sq];
-            mg_table[PIECE][sq] = mg_value[PIECE] + mg_pesto_table[PIECE][MIRROR64(sq)];
-            eg_table[PIECE][sq] = eg_value[PIECE] + eg_pesto_table[PIECE][MIRROR64(sq)];
+            mg_table[PIECE][sq] = mg_value[PIECE] + mg_pesto_table[PIECE][mirror_square[sq]];
+            eg_table[PIECE][sq] = eg_value[PIECE] + eg_pesto_table[PIECE][mirror_square[sq]];
         }
     }
 }
@@ -217,192 +229,86 @@ int EvalPosition(const S_BOARD *pos)
     eg[WHITE] = 0;
     eg[BLACK] = 0;
 
-    int pceNum, pce, sq, pc;
+    for (int sq = 0; sq < 64; sq++){
+        int piece = pos->pieces[sq];
+        if (piece != EMPTY){
+            switch(piece){
 
-    /** ****** **/
-    /** PAWNS **/
-    /** **** **/
+                // Pawns
+                case wP:
+                    mg[WHITE] += mg_table[PAWN+6][sq];
+                    eg[WHITE] += eg_table[PAWN+6][sq];
+                    gamePhase += gamephaseInc[PAWN+6];
+                    break;
+                case bP:
+                    mg[BLACK] += mg_table[PAWN][sq];
+                    eg[BLACK] += eg_table[PAWN][sq];
+                    gamePhase += gamephaseInc[PAWN];
+                    break;
+                
+                // Knights
+                case wN:
+                    mg[WHITE] += mg_table[KNIGHT+6][sq];
+                    eg[WHITE] += eg_table[KNIGHT+6][sq];
+                    gamePhase += gamephaseInc[KNIGHT+6];
+                    break;
+                case bN:
+                    mg[BLACK] += mg_table[KNIGHT][sq];
+                    eg[BLACK] += eg_table[KNIGHT][sq];
+                    gamePhase += gamephaseInc[KNIGHT];
+                    break;
 
-    pce = wP;
-    for (pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum){
-        sq = pos->pList[pce][pceNum];
-
-        ASSERT(SqOnBoard(sq));
-
-        mg[WHITE] += mg_table[PAWN][SQ64(sq)];
-        eg[WHITE] += eg_table[PAWN][SQ64(sq)];
-        gamePhase += gamephaseInc[PAWN];
-
-        /*if (IsolatedMask[SQ64(sq)] & pos->pawns[WHITE] == 0){
-			mg[WHITE] += PawnIsolatedMg;
-			eg[WHITE] += PawnIsolatedEg;
-		}
-
-		if (WhitePassedMask[SQ64(sq)] & pos->pawns[BLACK] == 0){
-			mg[WHITE] += PawnPassed[RanksBrd[sq]];
-			eg[WHITE] += PawnPassed[RanksBrd[sq]];
-		}*/
+                // Bishops
+                case wB:
+                    mg[WHITE] += mg_table[BISHOP+6][sq];
+                    eg[WHITE] += eg_table[BISHOP+6][sq];
+                    gamePhase += gamephaseInc[BISHOP+6];
+                    break;
+                case bB:
+                    mg[BLACK] += mg_table[BISHOP][sq];
+                    eg[BLACK] += eg_table[BISHOP][sq];
+                    gamePhase += gamephaseInc[BISHOP];
+                    break;
+                
+                // Rooks
+                case wR:
+                    mg[WHITE] += mg_table[ROOK+6][sq];
+                    eg[WHITE] += eg_table[ROOK+6][sq];
+                    gamePhase += gamephaseInc[ROOK+6];
+                    break;
+                case bR:
+                    mg[BLACK] += mg_table[ROOK][sq];
+                    eg[BLACK] += eg_table[ROOK][sq];
+                    gamePhase += gamephaseInc[ROOK];
+                    break;
+                
+                // Queens
+                case wQ:
+                    mg[WHITE] += mg_table[QUEEN+6][sq];
+                    eg[WHITE] += eg_table[QUEEN+6][sq];
+                    gamePhase += gamephaseInc[QUEEN+6];
+                    break;
+                case bQ:
+                    mg[BLACK] += mg_table[QUEEN][sq];
+                    eg[BLACK] += eg_table[QUEEN][sq];
+                    gamePhase += gamephaseInc[QUEEN];
+                    break;
+                
+                // Kings
+                case wK:
+                    mg[WHITE] += mg_table[KING+6][sq];
+                    eg[WHITE] += eg_table[KING+6][sq];
+                    gamePhase += gamephaseInc[KING+6];
+                    break;
+                case bK:
+                    mg[BLACK] += mg_table[KING][sq];
+                    eg[BLACK] += eg_table[KING][sq];
+                    gamePhase += gamephaseInc[KING];
+                    break;
+            }
+        }
     }
 
-    pce = bP;
-    for (pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum){
-        sq = pos->pList[pce][pceNum];
-
-        ASSERT(SqOnBoard(sq));
-
-        mg[BLACK] += mg_table[PAWN+6][SQ64(sq)];
-        eg[BLACK] += eg_table[PAWN+6][SQ64(sq)];
-        gamePhase += gamephaseInc[PAWN+6];
-
-        /*if (IsolatedMask[SQ64(sq)] & pos->pawns[BLACK] == 0){
-			mg[BLACK] += PawnIsolatedMg;
-			eg[BLACK] += PawnIsolatedEg;
-		}
-		if (BlackPassedMask[SQ64(sq)] & pos->pawns[WHITE] == 0){
-			mg[BLACK] += PawnPassed[7 - RanksBrd[sq]];
-			eg[BLACK] += PawnPassed[7 - RanksBrd[sq]];
-		}*/
-    }
-
-    /** ****** **/
-    /** Knights **/
-    /** **** ***/
-
-    pce = wN;
-    for (pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum){
-        sq = pos->pList[pce][pceNum];
-
-        ASSERT(SqOnBoard(sq));
-
-        mg[WHITE] += mg_table[KNIGHT][SQ64(sq)];
-        eg[WHITE] += eg_table[KNIGHT][SQ64(sq)];
-        gamePhase += gamephaseInc[KNIGHT];
-    }
-
-    pce = bN;
-    for (pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum){
-        sq = pos->pList[pce][pceNum];
-
-        ASSERT(SqOnBoard(sq));
-
-        mg[BLACK] += mg_table[KNIGHT+6][SQ64(sq)];
-        eg[BLACK] += eg_table[KNIGHT+6][SQ64(sq)];
-        gamePhase += gamephaseInc[KNIGHT+6];
-    }
-
-    /** ****** **/
-    /** Bishops **/
-    /** **** ***/
-    pce = wB;
-    for (pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum){
-        sq = pos->pList[pce][pceNum];
-
-        ASSERT(SqOnBoard(sq));
-
-        mg[WHITE] += mg_table[BISHOP][SQ64(sq)];
-        eg[WHITE] += eg_table[BISHOP][SQ64(sq)];
-        gamePhase += gamephaseInc[BISHOP];
-    }
-
-    pce = bB;
-    for (pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum){
-        sq = pos->pList[pce][pceNum];
-
-        ASSERT(SqOnBoard(sq));
-
-        mg[BLACK] += mg_table[BISHOP+6][SQ64(sq)];
-        eg[BLACK] += eg_table[BISHOP+6][SQ64(sq)];
-        gamePhase += gamephaseInc[BISHOP+6];
-    }
-
-    /** ****** **/
-    /** Rooks **/
-    /** **** ***/
-
-    pce = wR;
-    for (pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum){
-        sq = pos->pList[pce][pceNum];
-
-        ASSERT(SqOnBoard(sq));
-
-        mg[WHITE] += mg_table[ROOK][SQ64(sq)];
-        eg[WHITE] += eg_table[ROOK][SQ64(sq)];
-        gamePhase += gamephaseInc[ROOK];
-
-        /*if(!(pos->pawns[BOTH] & FileBBMask[FilesBrd[sq]])) {
-			mg[WHITE] += RookOpenFile;
-			eg[WHITE] += RookOpenFile;
-		} else if(!(pos->pawns[WHITE] & FileBBMask[FilesBrd[sq]])) {
-			mg[WHITE] += RookSemiOpenFile;
-			eg[WHITE] += RookSemiOpenFile;
-		}*/
-    }
-
-    pce = bR;
-    for (pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum){
-        sq = pos->pList[pce][pceNum];
-
-        ASSERT(SqOnBoard(sq));
-
-        mg[BLACK] += mg_table[ROOK+6][SQ64(sq)];
-        eg[BLACK] += eg_table[ROOK+6][SQ64(sq)];
-        gamePhase += gamephaseInc[ROOK+6];
-
-        /*if(!(pos->pawns[BOTH] & FileBBMask[FilesBrd[sq]])) {
-			mg[BLACK] += RookOpenFile;
-			eg[BLACK] += RookOpenFile;
-		} else if(!(pos->pawns[BLACK] & FileBBMask[FilesBrd[sq]])) {
-			mg[BLACK] += RookSemiOpenFile;
-			eg[BLACK] += RookSemiOpenFile;
-		}*/
-    }
-
-    /** ****** **/
-    /** Queens **/
-    /** **** ***/
-    pce = wQ;
-    for (pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum){
-        sq = pos->pList[pce][pceNum];
-
-        ASSERT(SqOnBoard(sq));
-        mg[WHITE] += mg_table[QUEEN][SQ64(sq)];
-        eg[WHITE] += eg_table[QUEEN][SQ64(sq)];
-        gamePhase += gamephaseInc[QUEEN];
-    }
-
-    pce = bQ;
-    for (pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum){
-        sq = pos->pList[pce][pceNum];
-
-        ASSERT(SqOnBoard(sq));
-
-        mg[BLACK] += mg_table[QUEEN+6][SQ64(sq)];
-        eg[BLACK] += eg_table[QUEEN+6][SQ64(sq)];
-        gamePhase += gamephaseInc[QUEEN+6];
-    }
-
-    /** ****** **/
-    /** King **/
-    /** **** ***/
-
-    pce = wK;
-	sq = pos->pList[pce][0];
-	ASSERT(SqOnBoard(sq));
-
-    mg[WHITE] += mg_table[KING][SQ64(sq)];
-    eg[WHITE] += eg_table[KING][SQ64(sq)];
-    gamePhase += gamephaseInc[KING];
-	
-	pce = bK;
-	sq = pos->pList[pce][0];
-	ASSERT(SqOnBoard(sq));
-	
-	mg[BLACK] += mg_table[KING+6][SQ64(sq)];
-    eg[BLACK] += eg_table[KING+6][SQ64(sq)];
-    gamePhase += gamephaseInc[KING+6];
-
-    if(pos->pceNum[wB] >= 2) eg[WHITE] += BishopPair;
-	if(pos->pceNum[bB] >= 2) eg[BLACK] += BishopPair;
 
     /* Tapered Evaluation */
 	int otherSide = pos->side^1;

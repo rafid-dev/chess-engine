@@ -34,36 +34,36 @@ const int PceDir[13][8] = {
 	{ -1, -10,	1, 10, -9, -11, 11, 9 }
 };
 
-const int VictimScore[13] = {0, 100, 200, 300, 400, 500, 600, 100, 200, 300, 400, 500, 600};
-static int MvvLvaScores[13][13];
+//  const int VictimScore[13] = {0, 100, 200, 300, 400, 500, 600, 100, 200, 300, 400, 500, 600};
+//  static int MvvLvaScores[13][13];
 
-void InitMvvlva(){
-	int attacker;
-	int victim;
+// void InitMvvlva(){
+// 	int attacker;
+// 	int victim;
 
-	for (attacker = wP; attacker <= bK; ++attacker){
-		for (victim = wP; victim <= bK; ++victim){
-			MvvLvaScores[victim][attacker] = VictimScore[victim] + 6 - (VictimScore[attacker]/100);
-		}
-	}	
-}
+// 	for (attacker = wP; attacker <= bK; ++attacker){
+// 		for (victim = wP; victim <= bK; ++victim){
+// 			MvvLvaScores[victim][attacker] = VictimScore[victim] + 6 - (VictimScore[attacker]/100);
+// 		}
+// 	}	
+// }
 
-int MoveExists(S_BOARD *pos, const int move){
-	S_MOVELIST list[1];
-	GenerateAllMoves(pos, list);
+// int MoveExists(S_BOARD *pos, const int move){
+// 	S_MOVELIST list[1];
+// 	GenerateAllMoves(pos, list);
 
-	int moveNum = 0;
-	for (moveNum = 0; moveNum < list->count; ++moveNum){
-		if (!MakeMove(pos, list->moves[moveNum].move)){
-			continue;
-		}
-		TakeMove(pos);
-		if (list->moves[moveNum].move == move){
-			return TRUE;
-		}
-	}
-	return FALSE;
-}
+// 	int moveNum = 0;
+// 	for (moveNum = 0; moveNum < list->count; ++moveNum){
+// 		if (!MakeMove(pos, list->moves[moveNum].move)){
+// 			continue;
+// 		}
+// 		TakeMove(pos);
+// 		if (list->moves[moveNum].move == move){
+// 			return TRUE;
+// 		}
+// 	}
+// 	return FALSE;
+// }
 
 static void AddQuietMove(const S_BOARD *pos, int move, S_MOVELIST *list){
 
@@ -89,7 +89,7 @@ static void AddCaptureMove(const S_BOARD *pos, int move, S_MOVELIST *list){
 	ASSERT(PieceValid(CAPTURED(move)));
 
     list->moves[list->count].move = move;
-    list->moves[list->count].score = MvvLvaScores[CAPTURED(move)][pos->pieces[FROMSQ(move)]] + 1000000;
+    //list->moves[list->count].score = MvvLvaScores[CAPTURED(move)][pos->pieces[FROMSQ(move)]] + 1000000;
     list->count++;
 }
 

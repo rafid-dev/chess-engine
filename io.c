@@ -10,70 +10,108 @@ char *PrSq(const int sq){
     return SqStr;
 }
 
-char *PrMove(const int move) {
+char promoted_pieces[] = {
+    [wQ] = 'q',
+    [wR] = 'r',
+    [wB] = 'b',
+    [wN] = 'n',
+	
+    [bQ] = 'q',
+    [bR] = 'r',
+    [bB] = 'b',
+    [bN] = 'n'
+};
 
+char *PrMove(const int move) {
 	static char MvStr[6];
 
-	int ff = FilesBrd[FROMSQ(move)];
-	int rf = RanksBrd[FROMSQ(move)];
-	int ft = FilesBrd[TOSQ(move)];
-	int rt = RanksBrd[TOSQ(move)];
-
-	int promoted = PROMOTED(move);
-
-	if(promoted) {
-		char pchar = 'q';
-		if(IsKn(promoted)) {
-			pchar = 'n';
-		} else if(IsRQ(promoted) && !IsBQ(promoted))  {
-			pchar = 'r';
-		} else if(!IsRQ(promoted) && IsBQ(promoted))  {
-			pchar = 'b';
-		}
-		sprintf(MvStr, "%c%c%c%c%c", ('a'+ff), ('1'+rf), ('a'+ft), ('1'+rt), pchar);
-	} else {
-		sprintf(MvStr, "%c%c%c%c", ('a'+ff), ('1'+rf), ('a'+ft), ('1'+rt));
+	if (get_move_promoted(move))
+        sprintf(MvStr, "%s%s%c", square_to_coordinates[get_move_source(move)],square_to_coordinates[get_move_target(move)],promoted_pieces[get_move_promoted(move)]);
+    else{
+        sprintf(MvStr, "%s%s", square_to_coordinates[get_move_source(move)],square_to_coordinates[get_move_target(move)]);
 	}
+	// int ff = FilesBrd[FROMSQ(move)];
+	// int rf = RanksBrd[FROMSQ(move)];
+	// int ft = FilesBrd[TOSQ(move)];
+	// int rt = RanksBrd[TOSQ(move)];
+
+	// int promoted = PROMOTED(move);
+
+	// if(promoted) {
+	// 	char pchar = 'q';
+	// 	if(IsKn(promoted)) {
+	// 		pchar = 'n';
+	// 	} else if(IsRQ(promoted) && !IsBQ(promoted))  {
+	// 		pchar = 'r';
+	// 	} else if(!IsRQ(promoted) && IsBQ(promoted))  {
+	// 		pchar = 'b';
+	// 	}
+	// 	sprintf(MvStr, "%c%c%c%c%c", ('a'+ff), ('1'+rf), ('a'+ft), ('1'+rt), pchar);
+	// } else {
+	// 	sprintf(MvStr, "%c%c%c%c", ('a'+ff), ('1'+rf), ('a'+ft), ('1'+rt));
+	// }
 
 	return MvStr;
 }
 
 int ParseMove (char *ptrChar, S_BOARD *pos){
-	if (ptrChar[1] > '8' || ptrChar[1] < '1') return NOMOVE;
-	if (ptrChar[3] > '8' || ptrChar[3] < '1') return FALSE;
-	if (ptrChar[0] > 'h' || ptrChar[0] < 'a') return FALSE;
-	if (ptrChar[2] > 'h' || ptrChar[2] < 'a') return FALSE;
+	// if (ptrChar[1] > '8' || ptrChar[1] < '1') return NOMOVE;
+	// if (ptrChar[3] > '8' || ptrChar[3] < '1') return FALSE;
+	// if (ptrChar[0] > 'h' || ptrChar[0] < 'a') return FALSE;
+	// if (ptrChar[2] > 'h' || ptrChar[2] < 'a') return FALSE;
 
-	int from = FR2SQ(ptrChar[0] - 'a', ptrChar[1] - '1');
-	int to = FR2SQ(ptrChar[2] - 'a', ptrChar[3] - '1');
+	// parse source square
+    int source_square = (ptrChar[0] - 'a') + (8 - (ptrChar[1] - '0')) * 8;
+    
+    // parse target square
+    int target_square = (ptrChar[2] - 'a') + (8 - (ptrChar[3] - '0')) * 8;
 
-	ASSERT(SqOnBoard(from) && SqOnBoard(to));
+	//ASSERT(SqOnBoard(from) && SqOnBoard(to));
+
 
 	S_MOVELIST list[1];
-	GenerateAllMoves(pos, list);
-	int MoveNum = 0;
-	int Move = 0;
-	int PromPce = EMPTY;
+	generate_moves(list, pos);
 
-	for (MoveNum = 0; MoveNum < list->count; ++MoveNum){
-		Move = list->moves[MoveNum].move;
-
-		if (FROMSQ(Move) == from && TOSQ(Move) == to){
-			PromPce = PROMOTED(Move);
-			if (PromPce != EMPTY){
-				if (IsRQ(PromPce) && !IsBQ(PromPce) && ptrChar[4] == 'r'){
-					return Move;
-				}else if (!IsRQ(PromPce) && IsBQ(PromPce) && ptrChar[4] == 'b'){
-					return Move;
-				}else if (IsRQ(PromPce) && IsBQ(PromPce) && ptrChar[4] == 'q'){
-					return Move;
-				}else if (IsKn(PromPce) && ptrChar[4] == 'n'){
-					return Move;
-				}
-				continue;
-			}
-			return Move;
-		}
+	for (int move_count = 0; move_count < list->count; move_count++){
+		// init move
+        int move = list->moves[move_count].move;
+        
+        // make sure source & target squares are available within the generated move
+        if (source_square == get_move_source(move) && target_square == get_move_target(move))
+        {
+            // init promoted piece
+            int promoted_piece = get_move_promoted(move);
+            
+            // promoted piece is available
+            if (promoted_piece)
+            {
+                // promoted to queen
+                if ((promoted_piece == wQ || promoted_piece == bQ) && ptrChar[4] == 'q')
+                    // return legal move
+                    return move;
+                
+                // promoted to rook
+                else if ((promoted_piece == wR || promoted_piece == bR) && ptrChar[4] == 'r')
+                    // return legal move
+                    return move;
+                
+                // promoted to bishop
+                else if ((promoted_piece == wB || promoted_piece == bB) && ptrChar[4] == 'b')
+                    // return legal move
+                    return move;
+                
+                // promoted to knight
+                else if ((promoted_piece == wN || promoted_piece == bN) && ptrChar[4] == 'n')
+                    // return legal move
+                    return move;
+                
+                // continue the loop on possible wrong promotions (e.g. "e7e8f")
+                continue;
+            }
+            
+            // return legal move
+            return move;
+        }
 	}
 
 	return NOMOVE;
@@ -115,3 +153,5 @@ void PrintMoveList(S_MOVELIST *list) {
 	}
 	printf("MoveList Total %d Moves:\n\n",list->count);
 }
+
+

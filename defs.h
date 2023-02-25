@@ -25,7 +25,7 @@
 
 typedef unsigned long long U64;
 
-#define NAME "Rice LMP"
+#define NAME "Rice BB"
 #define BRD_SQ_NUM 120
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
@@ -56,6 +56,17 @@ enum {
     A6 = 71, B6, C6, D6, E6, F6, G6, H6,
     A7 = 81, B7, C7, D7, E7, F7, G7, H7,
     A8 = 91, B8, C8, D8, E8, F8, G8, H8, NO_SQ, OFFBOARD
+};
+
+enum {
+    a8, b8, c8, d8, e8, f8, g8, h8,
+    a7, b7, c7, d7, e7, f7, g7, h7,
+    a6, b6, c6, d6, e6, f6, g6, h6,
+    a5, b5, c5, d5, e5, f5, g5, h5,
+    a4, b4, c4, d4, e4, f4, g4, h4,
+    a3, b3, c3, d3, e3, f3, g3, h3,
+    a2, b2, c2, d2, e2, f2, g2, h2,
+    a1, b1, c1, d1, e1, f1, g1, h1, no_sq
 };
 
 enum {FALSE, TRUE};
@@ -101,12 +112,12 @@ typedef struct{
     int enPas;
     int fiftyMove;
     U64 posKey;
-
+    int capture;
 }S_UNDO;
 
 typedef struct {
 
-    int pieces[BRD_SQ_NUM];
+    int pieces[64];
     U64 pawns[3];
 
     int KingSq[2];
@@ -128,6 +139,13 @@ typedef struct {
     int minPiece[2];
     int material[2];
 
+    // piece bitboards
+    U64 bitboards[13];
+
+    // occupancy bitboards
+    U64 occupancies[3];
+
+
     S_UNDO history[MAXGAMEMOVES];
 
     // piece list
@@ -136,7 +154,7 @@ typedef struct {
     // pList[piece][0] = E1....
     int PvArray[MAXDEPTH];
 
-    int searchHistory[13][BRD_SQ_NUM];
+    int searchHistory[13][64];
     int searchKillers[2][MAXDEPTH];
 }S_BOARD;
 
@@ -166,6 +184,7 @@ typedef struct {
 
 typedef struct {
     int eval;
+    int excluded;
 }S_STACK;
 
 /* GAME MOVE */
@@ -210,14 +229,21 @@ typedef struct {
 
 #define MIRROR64(sq) (Mirror64[(sq)])
 
+#define set_bit(bitboard, square) ((bitboard) |= (1ULL << (square)))
+#define get_bit(bitboard, square) ((bitboard) & (1ULL << (square)))
+#define pop_bit(bitboard, square) ((bitboard) &= ~(1ULL << (square)))
+#define count_bits(bitboard) (__builtin_popcountll(bitboard));
+
+
 /*GLOBALS*/
 extern int Sq120ToSq64[BRD_SQ_NUM];
 extern int Sq64ToSq120[64];
 extern U64 SetMask[64];
 extern U64 ClearMask[64];
-extern U64 PieceKeys[13][120];
+extern U64 PieceKeys[13][64];
 extern U64 SideKey;
 extern U64 CastleKeys[16];
+extern U64 EnpassantKeys[64];
 
 extern char PceChar[];
 extern char SideChar[];
@@ -252,7 +278,89 @@ extern U64 IsolatedMask[64];
 extern int LMRTable[MAXDEPTH][MAXDEPTH];
 extern int LateMovePruningCounts[2][9];
 
+extern char *square_to_coordinates[64]; 
+
+extern U64 rook_magic_numbers[64];
+
+extern U64 bishop_magic_numbers[64];
+
+extern U64 pawn_attacks[2][64];
+
+extern U64 knight_attacks[64];
+
+extern U64 king_attacks[64];
+
+extern U64 bishop_masks[64];
+
+extern U64 rook_masks[64];
+
+extern U64 bishop_attacks[64][512];
+
+extern U64 rook_attacks[64][4096]; 
+
 extern S_HASHTABLE HashTable[1];
+
+extern int PieceToPieceColor[13];
+extern char* PieceToPieceString[13];
+/* ADDED FUNCTIONS */
+int get_ls1b_index(U64 bitboard);
+void print_bitboard(U64 bitboard);
+void print_board(const S_BOARD *pos);
+void reset_board(S_BOARD *pos);
+void parse_fen(char *fen, S_BOARD *pos);
+
+//bitboard.c
+void init_sliders_attacks(int bishop);
+void init_leapers_attacks();
+U64 set_occupancy(int index, int bits_in_mask, U64 attack_mask);
+U64 get_bishop_attacks(int square, U64 occupancy);
+U64 get_rook_attacks(int square, U64 occupancy);
+U64 get_queen_attacks(int square, U64 occupancy);
+
+//attack.c
+int is_square_attacked(int square, int side, const S_BOARD *pos);
+void print_attacked_squares(int side, const S_BOARD *pos);
+
+//makemove.c
+void print_move(int move);
+
+//bbmovegen.c
+void generate_moves(S_MOVELIST *move_list, S_BOARD *pos);
+void generate_capture_moves(S_MOVELIST *move_list, S_BOARD *pos);
+// encode move
+#define encode_move(source, target, piece, promoted, capture, double_push, enpassant, castling) \
+    (source) |          \
+    (target << 6) |     \
+    (piece << 12) |     \
+    (promoted << 16) |  \
+    (capture << 20) |   \
+    (double_push << 21) |    \
+    (enpassant << 22) | \
+    (castling << 23)    \
+    
+// extract source square
+#define get_move_source(move) (move & 0x3f)
+
+// extract target square
+#define get_move_target(move) ((move & 0xfc0) >> 6)
+
+// extract piece
+#define get_move_piece(move) ((move & 0xf000) >> 12)
+
+// extract promoted piece
+#define get_move_promoted(move) ((move & 0xf0000) >> 16)
+
+// extract capture flag
+#define get_move_capture(move) (move & 0x100000)
+
+// extract double pawn push flag
+#define get_move_double(move) (move & 0x200000)
+
+// extract enpassant flag
+#define get_move_enpassant(move) (move & 0x400000)
+
+// extract castling flag
+#define get_move_castling(move) (move & 0x800000)
 /* FUNCTIONS */
 
 //init.c
@@ -304,8 +412,13 @@ extern void TakeMove(S_BOARD *pos);
 extern void MakeNullMove(S_BOARD *pos);
 extern void TakeNullMove(S_BOARD *pos);
 
+extern int make_move(S_BOARD *pos, int move);
+extern void take_move(S_BOARD *pos);
+
+
 //perft.c
-extern void PerftTest(int depth, S_BOARD *pos);
+extern long PerftTest(int depth, S_BOARD *pos);
+extern void PerftSuite(int target_depth, S_BOARD *pos, int line_start);
 
 //search.c
 extern void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info, S_HASHTABLE* table);
@@ -317,7 +430,7 @@ extern int GetTimeMs();
 // pvtable.c
 extern void InitHashTable(S_HASHTABLE *table, const int MB);
 extern void StoreHashEntry(S_BOARD *pos, S_HASHTABLE* table, const int move, int score, const int flags, const int depth);
-extern int ProbeHashEntry(S_BOARD *pos, S_HASHTABLE* table, int *move, int *score, int alpha, int beta, int depth);
+extern int ProbeHashEntry(S_BOARD *pos, S_HASHTABLE* table, int *move, int *score, int *ttflag, int *ttdepth, int alpha, int beta, int depth);
 extern int ProbePvMove(const S_BOARD *pos, const S_HASHTABLE* table);
 extern int GetPvLine(const int depth, S_BOARD *pos, const S_HASHTABLE* table);
 extern void ClearHashTable(S_HASHTABLE *table);

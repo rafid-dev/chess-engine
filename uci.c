@@ -92,35 +92,70 @@ void ParseGo(char* line, S_SEARCHINFO *info, S_BOARD *pos, S_HASHTABLE *table) {
 }
 
 void ParsePosition(char* lineIn, S_BOARD* pos){
+    // shift pointer to the right where next token begins
     lineIn += 9;
-    char *ptrChar = lineIn;
-
-    if(strncmp(lineIn, "startpos", 8) == 0){
-        ParseFen(START_FEN, pos);
-    } else {
-        ptrChar = strstr(lineIn, "fen");
-        if(ptrChar == NULL) {
-            ParseFen(START_FEN, pos);
-        } else {
-            ptrChar+=4;
-            ParseFen(ptrChar, pos);
+    
+    // init pointer to the current character in the command string
+    char *current_char = lineIn;
+    
+    // parse UCI "startpos" command
+    if (strncmp(lineIn, "startpos", 8) == 0)
+        // init chess board with start position
+        parse_fen(START_FEN, pos);
+    
+    // parse UCI "fen" command 
+    else
+    {
+        // make sure "fen" command is available within command string
+        current_char = strstr(lineIn, "fen");
+        
+        // if no "fen" command is available within command string
+        if (current_char == NULL)
+            // init chess board with start position
+            parse_fen(START_FEN, pos);
+            
+        // found "fen" substring
+        else
+        {
+            // shift pointer to the right where next token begins
+            current_char += 4;
+            
+            // init chess board with position from FEN string
+            parse_fen(current_char, pos);
         }
     }
-
-	ptrChar = strstr(lineIn, "moves");
-	int move;
-
-	if(ptrChar != NULL) {
-        ptrChar += 6;
-        while(*ptrChar) {
-              move = ParseMove(ptrChar,pos);
-			  if(move == NOMOVE) break;
-			  MakeMove(pos, move);
-              pos->ply=0;
-              while(*ptrChar && *ptrChar!= ' ') ptrChar++;
-              ptrChar++;
-        }
+    
+    // parse moves after position
+    current_char = strstr(lineIn, "moves");
+    
+    // moves available
+    if (current_char != NULL)
+    {
+        // shift pointer to the ri ght where next token begins
+        current_char += 6;
+        
+        // loop over moves within a move string
+        while(*current_char)
+        {
+            // parse next move
+            int move = ParseMove(current_char, pos);
+            
+            // if no more moves
+            if (move == 0)
+                // break out of the loop
+                break;
+            
+            make_move(pos, move);
+            
+            // move current character mointer to the end of current move
+            while (*current_char && *current_char != ' ') current_char++;
+            
+            // go to the next move
+            current_char++;
+        }        
     }
+    print_board(pos);
+
 }
 
 
@@ -151,26 +186,22 @@ void Uci_Loop (){
             continue;
         }
         if (!strncmp(line, "run", 3)){
-            ParseFen(START_FEN, pos);
+            parse_fen(START_FEN, pos);
             ParseGo("go infinite", info, pos, HashTable);
         }else if (!strncmp(line, "eval", 4)){
             printf("%d\n", EvalPosition(pos));
         }else if (!strncmp(line, "perft", 5)){
             PerftTest(5, pos);
         }else if (!strncmp(line, "print", 5)){
-	        PrintBoard(pos);
+	        print_board(pos);
         }else if (!strncmp(line, "isready", 7)){
             printf("readyok\n");
             continue;
         }else if (!strncmp(line, "position", 8)){
-
             ParsePosition(line, pos);
-
         }else if (!strncmp(line, "ucinewgame", 10)){
-
             ClearHashTable(HashTable);
             ParsePosition("position startpos\n", pos);
-
         }else if (!strncmp(line, "go", 2)){
             ParseGo(line, info, pos, HashTable);
         }else if (!strncmp(line, "quit", 4)){
