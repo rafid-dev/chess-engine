@@ -8,7 +8,9 @@ int main (){
 
     AllInit();
 
-    // S_BOARD pos[1];
+    //   S_BOARD pos[1];
+    //   parse_fen(TRICKY_POSITION, pos);
+    //   PerftTest(6, pos);
     // PerftSuite(5, pos , 117);
     
 

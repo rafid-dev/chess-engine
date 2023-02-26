@@ -162,12 +162,21 @@ static inline int Quiescence(int alpha, int beta, S_BOARD *pos, S_SEARCHINFO *in
     return alpha;
 }
 
+static inline int IsCheck (S_BOARD *pos){
+    int king = (pos->side == WHITE) ? wK : bK;
+    int king_sq = get_ls1b_index(pos->bitboards[king]);
+    if (is_square_attacked(king_sq, pos->side^1, pos)){
+        return TRUE;
+    }
+    return FALSE;
+}
+
 static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, S_HASHTABLE *table, S_STACK *ss, int DoNull)
 {
 
     if (depth == 0)
     {
-        return Quiescence(alpha, beta, pos, info);
+        return EvalPosition(pos);
     }
     if ((info->nodes & 2047) == 0)
     {
@@ -185,7 +194,7 @@ static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEAR
         return EvalPosition(pos);
     }
 
-    int InCheck = (is_square_attacked((pos->side == WHITE) ? get_ls1b_index(pos->bitboards[wK]) : get_ls1b_index(pos->bitboards[bK]), pos->side^1, pos));
+    int InCheck = IsCheck(pos);
 
     if (InCheck == TRUE)
     {
@@ -207,33 +216,33 @@ static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEAR
     
     bool improving = !InCheck && posEval > (ss-1)->eval;
 
-    if(!isRoot && !excluded && ProbeHashEntry(pos, table, &PvMove, &ttescore, &tteflag, &tteDepth, alpha, beta, depth) == TRUE ) {
-		table->cut++;
-		return ttescore;
-	}
+    // if(!isRoot && !excluded && ProbeHashEntry(pos, table, &PvMove, &ttescore, &tteflag, &tteDepth, alpha, beta, depth) == TRUE ) {
+	// 	table->cut++;
+	// 	return ttescore;
+	// }
 
-    if (!isPvNode && !InCheck && pos->ply){
-        /* Reverse Futility Pruning (RFP) */
-        if (depth <= 5 && posEval >= beta && posEval - (depth * 75) >= beta && posEval < ISMATE)
-        {
-            return posEval;
-        }
-        /* NULL Move Pruning (NMP) */
-        if (depth >= 4)
-        {
-            MakeNullMove(pos);
-            score = -AlphaBeta(-beta, -beta + 1, depth - 4, pos, info, table, ss, FALSE);
-            TakeNullMove(pos);
-            if (info->stopped == TRUE)
-            {
-                return 0;
-            }
-            if (score >= beta && abs(score) < ISMATE)
-            {
-                return beta;
-            }
-        }
-    }
+    // if (!isPvNode && !InCheck && pos->ply){
+    //     /* Reverse Futility Pruning (RFP) */
+    //     if (depth <= 5 && posEval >= beta && posEval - (depth * 75) >= beta && posEval < ISMATE)
+    //     {
+    //         return posEval;
+    //     }
+    //     /* NULL Move Pruning (NMP) */
+    //     if (depth >= 4)
+    //     {
+    //         MakeNullMove(pos);
+    //         score = -AlphaBeta(-beta, -beta + 1, depth - 4, pos, info, table, ss, FALSE);
+    //         TakeNullMove(pos);
+    //         if (info->stopped == TRUE)
+    //         {
+    //             return 0;
+    //         }
+    //         if (score >= beta && abs(score) < ISMATE)
+    //         {
+    //             return beta;
+    //         }
+    //     }
+    // }
 
     S_MOVELIST list[1];
     generate_moves(list, pos);
@@ -258,8 +267,8 @@ static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEAR
 	}
     for (MoveNum = 0; MoveNum < list->count; ++MoveNum)
     {
-        PickNextMove(MoveNum, list);
-
+        //PickNextMove(MoveNum, list);
+        
         int move = list->moves[MoveNum].move;
         //if (move==ss->excluded)continue;
 
@@ -282,12 +291,12 @@ static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEAR
             }
         }*/
 
-        if (isQuiet){
-            // Late Move Pruning/Movecount pruning
-            if (!isPvNode && !InCheck && depth < 4 && (quietsSearched >= depth*8)){
-                continue;
-            }
-        }
+        // if (isQuiet){
+        //     // Late Move Pruning/Movecount pruning
+        //     if (!isPvNode && !InCheck && depth < 4 && (quietsSearched >= depth*8)){
+        //         continue;
+        //     }
+        // }
 
         int newDepth = depth + extension;
         if (!make_move(pos, move))
@@ -307,28 +316,28 @@ static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEAR
         int do_fullsearch = FALSE;
 
         // Late Move Reduction (LMR)
-        if (!InCheck && depth >= 3 && MovesSearched >= 5 && isQuiet){
+        // if (!InCheck && depth >= 3 && MovesSearched >= 5 && isQuiet){
 
-            int reduction = LMRTable[MIN(depth, 64)][MAX(MovesSearched, 63)];
-            reduction = MIN(depth - 1, MAX(1, reduction));
+        //     int reduction = LMRTable[MIN(depth, 64)][MAX(MovesSearched, 63)];
+        //     reduction = MIN(depth - 1, MAX(1, reduction));
 
-            score = -AlphaBeta(-alpha-1, -alpha, newDepth - reduction, pos, info, table, ss, TRUE);
+        //     score = -AlphaBeta(-alpha-1, -alpha, newDepth - reduction, pos, info, table, ss, TRUE);
 
-            do_fullsearch = score > alpha && reduction != 1;
+        //     do_fullsearch = score > alpha && reduction != 1;
 
-        }else{
-            do_fullsearch = !isPvNode || MovesSearched > 1;
-        }
+        // }else{
+        //     do_fullsearch = !isPvNode || MovesSearched > 1;
+        // }
 
-        // Full depth search on a null window
-        if (do_fullsearch){
-            score = -AlphaBeta(-alpha-1, -alpha, newDepth - 1, pos, info, table, ss, TRUE);
-        }
+        // // Full depth search on a null window
+        // if (do_fullsearch){
+        //     score = -AlphaBeta(-alpha-1, -alpha, newDepth - 1, pos, info, table, ss, TRUE);
+        // }
 
         // Principal Variation Search (PVS)
-        if (isPvNode && (MovesSearched == 1 || score > alpha)){
+        //if (isPvNode && (MovesSearched == 1 || score > alpha)){
             score = -AlphaBeta(-beta, -alpha, newDepth - 1, pos, info, table, ss, TRUE);
-        }
+        //}
 
         take_move(pos);
 
@@ -368,7 +377,7 @@ static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEAR
                 }
             }
         }
-        if (isRoot && info->stopped == TRUE && BestMove != NOMOVE){
+        if (isRoot && info->stopped == TRUE){
             break;
         }
     }

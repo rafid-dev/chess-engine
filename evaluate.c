@@ -163,6 +163,8 @@ int eg_king_table[64] = {
     -53, -34, -21, -11, -28, -14, -24, -43
 };
 
+int empty_table[64];
+
 int* mg_pesto_table[6] =
 {
     mg_pawn_table,
@@ -210,10 +212,10 @@ void init_tables()
     
     for (int sq = 0; sq < 64;sq++){
         for (int PIECE = PAWN; PIECE <= KING; PIECE++){
-            mg_table[PIECE+6][sq] = mg_value[PIECE] + mg_pesto_table[PIECE][sq];
-            eg_table[PIECE+6][sq] = eg_value[PIECE] + eg_pesto_table[PIECE][sq];
-            mg_table[PIECE][sq] = mg_value[PIECE] + mg_pesto_table[PIECE][mirror_square[sq]];
-            eg_table[PIECE][sq] = eg_value[PIECE] + eg_pesto_table[PIECE][mirror_square[sq]];
+            mg_table[PIECE][sq] = mg_value[PIECE] + mg_pesto_table[PIECE][sq];
+            eg_table[PIECE][sq] = eg_value[PIECE] + eg_pesto_table[PIECE][sq];
+            mg_table[PIECE+6][sq] = mg_value[PIECE] + mg_pesto_table[PIECE][mirror_square[sq]];
+            eg_table[PIECE+6][sq] = eg_value[PIECE] + eg_pesto_table[PIECE][mirror_square[sq]];
         }
     }
 }
@@ -229,85 +231,141 @@ int EvalPosition(const S_BOARD *pos)
     eg[WHITE] = 0;
     eg[BLACK] = 0;
 
-    for (int sq = 0; sq < 64; sq++){
-        int piece = pos->pieces[sq];
-        if (piece != EMPTY){
-            switch(piece){
+    int sq, piece;
 
-                // Pawns
-                case wP:
-                    mg[WHITE] += mg_table[PAWN+6][sq];
-                    eg[WHITE] += eg_table[PAWN+6][sq];
-                    gamePhase += gamephaseInc[PAWN+6];
-                    break;
-                case bP:
-                    mg[BLACK] += mg_table[PAWN][sq];
-                    eg[BLACK] += eg_table[PAWN][sq];
-                    gamePhase += gamephaseInc[PAWN];
-                    break;
-                
-                // Knights
-                case wN:
-                    mg[WHITE] += mg_table[KNIGHT+6][sq];
-                    eg[WHITE] += eg_table[KNIGHT+6][sq];
-                    gamePhase += gamephaseInc[KNIGHT+6];
-                    break;
-                case bN:
-                    mg[BLACK] += mg_table[KNIGHT][sq];
-                    eg[BLACK] += eg_table[KNIGHT][sq];
-                    gamePhase += gamephaseInc[KNIGHT];
-                    break;
+    // White's pieces
 
-                // Bishops
-                case wB:
-                    mg[WHITE] += mg_table[BISHOP+6][sq];
-                    eg[WHITE] += eg_table[BISHOP+6][sq];
-                    gamePhase += gamephaseInc[BISHOP+6];
-                    break;
-                case bB:
-                    mg[BLACK] += mg_table[BISHOP][sq];
-                    eg[BLACK] += eg_table[BISHOP][sq];
-                    gamePhase += gamephaseInc[BISHOP];
-                    break;
-                
-                // Rooks
-                case wR:
-                    mg[WHITE] += mg_table[ROOK+6][sq];
-                    eg[WHITE] += eg_table[ROOK+6][sq];
-                    gamePhase += gamephaseInc[ROOK+6];
-                    break;
-                case bR:
-                    mg[BLACK] += mg_table[ROOK][sq];
-                    eg[BLACK] += eg_table[ROOK][sq];
-                    gamePhase += gamephaseInc[ROOK];
-                    break;
-                
-                // Queens
-                case wQ:
-                    mg[WHITE] += mg_table[QUEEN+6][sq];
-                    eg[WHITE] += eg_table[QUEEN+6][sq];
-                    gamePhase += gamephaseInc[QUEEN+6];
-                    break;
-                case bQ:
-                    mg[BLACK] += mg_table[QUEEN][sq];
-                    eg[BLACK] += eg_table[QUEEN][sq];
-                    gamePhase += gamephaseInc[QUEEN];
-                    break;
-                
-                // Kings
-                case wK:
-                    mg[WHITE] += mg_table[KING+6][sq];
-                    eg[WHITE] += eg_table[KING+6][sq];
-                    gamePhase += gamephaseInc[KING+6];
-                    break;
-                case bK:
-                    mg[BLACK] += mg_table[KING][sq];
-                    eg[BLACK] += eg_table[KING][sq];
-                    gamePhase += gamephaseInc[KING];
-                    break;
-            }
-        }
+    piece = wP;
+    U64 white_pawns = pos->bitboards[piece];
+    while (white_pawns){
+        sq = get_ls1b_index(white_pawns);
+
+        mg[WHITE] += mg_table[piece-1][sq];
+        eg[WHITE] += eg_table[piece-1][sq];    
+        gamePhase += gamephaseInc[piece-1];
+
+        pop_bit(white_pawns, sq);
     }
+
+    piece = wN;
+    U64 white_knights = pos->bitboards[piece];
+    while (white_knights){
+        sq = get_ls1b_index(white_knights);
+
+        mg[WHITE] += mg_table[piece-1][sq];
+        eg[WHITE] += eg_table[piece-1][sq];    
+        gamePhase += gamephaseInc[piece-1];
+
+        pop_bit(white_knights, sq);
+    }
+
+    piece = wB;
+    U64 white_bishops = pos->bitboards[piece];
+    while (white_bishops){
+        sq = get_ls1b_index(white_bishops);
+
+        mg[WHITE] += mg_table[piece-1][sq];
+        eg[WHITE] += eg_table[piece-1][sq];    
+        gamePhase += gamephaseInc[piece-1];
+
+        pop_bit(white_bishops, sq);
+    }
+
+    piece = wR;
+    U64 white_rooks = pos->bitboards[piece];
+    while (white_rooks){
+        sq = get_ls1b_index(white_rooks);
+
+        mg[WHITE] += mg_table[piece-1][sq];
+        eg[WHITE] += eg_table[piece-1][sq];    
+        gamePhase += gamephaseInc[piece-1];
+
+        pop_bit(white_rooks, sq);
+    }
+
+    piece = wQ;
+    U64 white_queens = pos->bitboards[piece];
+    while (white_queens){
+        sq = get_ls1b_index(white_queens);
+
+        mg[WHITE] += mg_table[piece-1][sq];
+        eg[WHITE] += eg_table[piece-1][sq];    
+        gamePhase += gamephaseInc[piece-1];
+
+        pop_bit(white_queens, sq);
+    }
+
+    int king_square = get_ls1b_index(pos->bitboards[wK]);
+    mg[WHITE] += mg_table[wK-1][king_square];
+    eg[WHITE] += eg_table[wK-1][king_square];    
+    gamePhase += gamephaseInc[wK-1];
+
+
+    /* Black's pieces */
+    piece = bP;
+    U64 black_pawns = pos->bitboards[piece];
+    while (black_pawns){
+        sq = get_ls1b_index(black_pawns);
+
+        mg[BLACK] += mg_table[piece-1][sq];
+        eg[BLACK] += eg_table[piece-1][sq];    
+        gamePhase += gamephaseInc[piece-1];
+
+        pop_bit(black_pawns, sq);
+    }
+
+    piece = bN;
+    U64 black_knights = pos->bitboards[piece];
+    while (black_knights){
+        sq = get_ls1b_index(black_knights);
+
+        mg[BLACK] += mg_table[piece-1][sq];
+        eg[BLACK] += eg_table[piece-1][sq];    
+        gamePhase += gamephaseInc[piece-1];
+
+        pop_bit(black_knights, sq);
+    }
+
+    piece = bB;
+    U64 black_bishops = pos->bitboards[piece];
+    while (black_bishops){
+        sq = get_ls1b_index(black_bishops);
+
+        mg[BLACK] += mg_table[piece-1][sq];
+        eg[BLACK] += eg_table[piece-1][sq];    
+        gamePhase += gamephaseInc[piece-1];
+
+        pop_bit(black_bishops, sq);
+    }
+
+    piece = bR;
+    U64 black_rooks = pos->bitboards[piece];
+    while (black_rooks){
+        sq = get_ls1b_index(black_rooks);
+
+        mg[BLACK] += mg_table[piece-1][sq];
+        eg[BLACK] += eg_table[piece-1][sq];    
+        gamePhase += gamephaseInc[piece-1];
+
+        pop_bit(black_rooks, sq);
+    }
+
+    piece = bQ;
+    U64 black_queens = pos->bitboards[piece];
+    while (black_queens){
+        sq = get_ls1b_index(black_queens);
+
+        mg[BLACK] += mg_table[piece-1][sq];
+        eg[BLACK] += eg_table[piece-1][sq];    
+        gamePhase += gamephaseInc[piece-1];
+
+        pop_bit(black_queens, sq);
+    }
+
+    king_square = get_ls1b_index(pos->bitboards[bK]);
+    mg[BLACK] += mg_table[bK-1][king_square];
+    eg[BLACK] += eg_table[bK-1][king_square];
+    gamePhase += gamephaseInc[bK-1];
 
 
     /* Tapered Evaluation */
