@@ -5,6 +5,11 @@
         "defs.h": "c",
         "string.h": "c",
         "unistd.h": "c",
-        "time.h": "c"
+        "time.h": "c",
+        "system_error": "c",
+        "array": "c",
+        "functional": "c",
+        "type_traits": "c",
+        "utility": "c"
     }
 }

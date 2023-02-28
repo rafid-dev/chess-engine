@@ -85,3 +85,115 @@ int SqAttacked(const int sq, const int side, const S_BOARD *pos) {
 	return FALSE;
 	
 }
+
+const int PieceDirections[13][8] = {
+    {0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0},
+    {-8, -19, -21, -12, 8, 19, 21, 12},
+    {-9, -11, 11, 9, 0, 0, 0, 0},
+    {-1, -10, 1, 10, 0, 0, 0, 0},
+    {-1, -10, 1, 10, -9, -11, 11, 9},
+    {-1, -10, 1, 10, -9, -11, 11, 9},
+    {0, 0, 0, 0, 0, 0, 0},
+    {-8, -19, -21, -12, 8, 19, 21, 12},
+    {-9, -11, 11, 9, 0, 0, 0, 0},
+    {-1, -10, 1, 10, 0, 0, 0, 0},
+    {-1, -10, 1, 10, -9, -11, 11, 9},
+    {-1, -10, 1, 10, -9, -11, 11, 9}};
+
+const int NumDirections[13] = {
+    0, 0, 8, 4, 4, 8, 8, 0, 8, 4, 4, 8, 8};
+
+int get_attackers(S_BOARD *pos, int side, int from, int to, S_ATTACKLIST *attacklist)
+{
+    int f = 0;
+    int s = to;
+
+    int *atkvec;
+
+    attacklist->count = 0;
+
+    int king = (pos->side == WHITE ? wK : bK);
+    int queen = (pos->side == WHITE ? wQ : bQ);
+    int rook = (pos->side == WHITE ? wR : bR);
+    int bishop = (pos->side == WHITE ? wB : bB);
+    int knight = (pos->side == WHITE ? wN : bN);
+
+    int dir;
+    int t_sq;
+    int pce;
+    int num;
+
+    for (num = 0; num <= 1;)
+    {
+        pce = (num == 0 ? knight : king);
+        for (int i = 0; i < NumDirections[pce]; i++)
+        {
+            dir = PieceDirections[pce][i];
+            t_sq = s + dir;
+
+            if (SQOFFBOARD(t_sq))
+            {
+                continue;
+            }
+
+            if (pos->pieces[t_sq] == pce)
+            {
+                attacklist->square[attacklist->count] = t_sq;
+                attacklist->count++;
+                continue;
+            }
+        }
+        num++;
+    }
+
+    for (int num = 0; num <= 2;)
+    {
+        pce = (num == 0 ? bishop : (num == 1 ? rook : queen));
+        for (int i = 0; i < NumDirections[pce]; i++)
+        {
+            dir = PieceDirections[pce][i];
+            t_sq = s + dir;
+
+            while (!SQOFFBOARD(t_sq))
+            {
+                if (pos->pieces[t_sq] == pce)
+                {
+                    attacklist->square[attacklist->count] = t_sq;
+                    attacklist->count++;
+                    break;
+                }
+                t_sq += dir;
+            }
+        }
+        num++;
+    }
+
+    if (side == WHITE)
+    {
+        if (pos->pieces[s - 9] == wP)
+        {
+            attacklist->square[attacklist->count] = s - 9;
+            attacklist->count++;
+        }
+        if (pos->pieces[s - 11] == wP)
+        {
+            attacklist->square[attacklist->count] = s - 11;
+            attacklist->count++;
+        }
+    }
+    else
+    {
+        if (pos->pieces[s + 9] == bP)
+        {
+            attacklist->square[attacklist->count] = s + 9;
+            attacklist->count++;
+        }
+        if (pos->pieces[s + 11] == bP)
+        {
+            attacklist->square[attacklist->count] = s + 11;
+            attacklist->count++;
+        }
+    }
+    return 0;
+}

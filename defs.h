@@ -25,7 +25,7 @@
 
 typedef unsigned long long U64;
 
-#define NAME "Rice LMP"
+#define NAME "Rice test"
 #define BRD_SQ_NUM 120
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
@@ -66,6 +66,11 @@ enum {HFNONE, HFALPHA, HFBETA, HFEXACT};
 
 enum {PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING};
 
+typedef struct {
+    int count;
+    int square[16];
+} S_ATTACKLIST;
+
 typedef struct{
     int move;
     int score;
@@ -83,6 +88,7 @@ typedef struct{
     int depth;
     int flags;
     int age;
+    int eval;
 }S_HASHENTRY;
 
 typedef struct{
@@ -138,6 +144,7 @@ typedef struct {
 
     int searchHistory[13][BRD_SQ_NUM];
     int searchKillers[2][MAXDEPTH];
+
 }S_BOARD;
 
 typedef struct {
@@ -165,7 +172,9 @@ typedef struct {
 }S_SEARCH_THREAD_DATA;
 
 typedef struct {
+    int staticEval;
     int eval;
+    int excluded;
 }S_STACK;
 
 /* GAME MOVE */
@@ -209,6 +218,7 @@ typedef struct {
 #define IsKi(p) (PieceKing[(p)])
 
 #define MIRROR64(sq) (Mirror64[(sq)])
+#define SQOFFBOARD(sq) (FilesBrd[(sq)] == OFFBOARD)
 
 /*GLOBALS*/
 extern int Sq120ToSq64[BRD_SQ_NUM];
@@ -276,6 +286,7 @@ extern void MirrorBoard(S_BOARD *pos);
 
 // attack.c
 extern int SqAttacked(const int sq, const int side, const S_BOARD *pos);
+extern int get_attackers(S_BOARD *pos, int side, int from, int to, S_ATTACKLIST *attacklist);
 
 // io.c
 extern char *PrMove(const int move);
@@ -316,8 +327,8 @@ extern int GetTimeMs();
 
 // pvtable.c
 extern void InitHashTable(S_HASHTABLE *table, const int MB);
-extern void StoreHashEntry(S_BOARD *pos, S_HASHTABLE* table, const int move, int score, const int flags, const int depth);
-extern int ProbeHashEntry(S_BOARD *pos, S_HASHTABLE* table, int *move, int *score, int alpha, int beta, int depth);
+extern void StoreHashEntry(S_BOARD *pos, S_HASHTABLE* table, const int move, int score, const int flags, const int depth, const int eval);
+extern int ProbeHashEntry(S_BOARD *pos, S_HASHTABLE* table, int *move, int *score, int *tteflag, int *ttedepth, int *ttHit, int *tteEval, int alpha, int beta, int depth);
 extern int ProbePvMove(const S_BOARD *pos, const S_HASHTABLE* table);
 extern int GetPvLine(const int depth, S_BOARD *pos, const S_HASHTABLE* table);
 extern void ClearHashTable(S_HASHTABLE *table);

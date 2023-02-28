@@ -78,7 +78,7 @@ void InitHashTable(S_HASHTABLE *table, const int MB)
     }
 }
 
-void StoreHashEntry(S_BOARD *pos, S_HASHTABLE* table, const int move, int score, const int flags, const int depth)
+void StoreHashEntry(S_BOARD *pos, S_HASHTABLE* table, const int move, int score, const int flags, const int depth, const int eval)
 {
 
     int index = pos->posKey % table->numEntries;
@@ -118,9 +118,10 @@ void StoreHashEntry(S_BOARD *pos, S_HASHTABLE* table, const int move, int score,
     table->ptable[index].score = score;
     table->ptable[index].depth = depth;
     table->ptable[index].age = table->currentAge;
+    table->ptable[index].eval = eval;
 }
 
-int ProbeHashEntry(S_BOARD *pos, S_HASHTABLE* table, int *move, int *score, int alpha, int beta, int depth)
+int ProbeHashEntry(S_BOARD *pos, S_HASHTABLE* table, int *move, int *score, int *tteflag, int *ttedepth, int *ttHit,int *tteEval, int alpha, int beta, int depth)
 {
 
     int index =pos->posKey % table->numEntries;
@@ -135,6 +136,10 @@ int ProbeHashEntry(S_BOARD *pos, S_HASHTABLE* table, int *move, int *score, int 
     if (table->ptable[index].posKey == pos->posKey)
     {
         *move = table->ptable[index].move;
+        *tteflag = table->ptable[index].flags;
+        *ttedepth = table->ptable[index].depth;
+        *ttHit = TRUE;
+        *tteEval = table->ptable[index].eval;
         if (table->ptable[index].depth >= depth)
         {
             table->hit++;
