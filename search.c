@@ -170,6 +170,8 @@ static inline int Quiescence(int alpha, int beta, S_BOARD *pos, S_SEARCHINFO *in
         alpha = score;
     }
 
+    
+
     S_MOVELIST list[1];
     GenerateAllCaps(pos, list);
 
