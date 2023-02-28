@@ -278,7 +278,7 @@ static inline int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEAR
          }
 
         /* Reverse Futility Pruning (RFP) */
-        if (depth <= 5 && eval >= beta && eval - (depth*75) >= beta && eval < ISMATE)
+        if (depth <= 6 && eval >= beta && eval - (depth*75) >= beta && eval < ISMATE)
         {
             return eval;
         }
