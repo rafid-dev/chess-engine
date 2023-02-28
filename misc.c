@@ -2,7 +2,7 @@
 #include <unistd.h>
 #include <string.h>
 
-#ifndef WIN32
+#ifdef WIN32
 #include "windows.h"
 #else
 #include <sys/time.h>
