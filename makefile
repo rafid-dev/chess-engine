@@ -1,5 +1,5 @@
 SRCS=$(wildcard *.c)
-NAME=rice10
+NAME=rice11
 
 all:
 	gcc -Ofast $(SRCS) -o $(NAME) -pthread

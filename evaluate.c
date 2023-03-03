@@ -217,7 +217,7 @@ int EvalPosition(const S_BOARD *pos)
     eg[WHITE] = 0;
     eg[BLACK] = 0;
 
-    int pceNum, pce, sq, pc;
+    int pceNum, pce, sq;
 
     /** ****** **/
     /** PAWNS **/

@@ -16,8 +16,9 @@
 			printf("%s: ", __TIME__); \
 			printf("Assertion '%s' failed.\n", #n); \
 			printf("File '%s'\n", __FILE__); \
-			printf("Line %d\n", __LINE__); \
-			getchar(); \
+			printf("Line %d\n",
+            int searchCounters[13][BRD_SQ_NUM]; __LINE__); \
+			getchar(); 
 			exit(1); \
 		} \
 	} while(0);
@@ -25,7 +26,7 @@
 
 typedef unsigned long long U64;
 
-#define NAME "Rice 1.0"
+#define NAME "Rice Dev"
 #define BRD_SQ_NUM 120
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
@@ -144,7 +145,7 @@ typedef struct {
 
     int searchHistory[13][BRD_SQ_NUM];
     int searchKillers[2][MAXDEPTH];
-
+    int searchCounters[BRD_SQ_NUM][BRD_SQ_NUM];
 }S_BOARD;
 
 typedef struct {
@@ -175,6 +176,7 @@ typedef struct {
     int staticEval;
     int eval;
     int excluded;
+    int move;
 }S_STACK;
 
 /* GAME MOVE */
@@ -328,7 +330,7 @@ extern int GetTimeMs();
 // pvtable.c
 extern void InitHashTable(S_HASHTABLE *table, const int MB);
 extern void StoreHashEntry(S_BOARD *pos, S_HASHTABLE* table, const int move, int score, const int flags, const int depth, const int eval);
-extern int ProbeHashEntry(S_BOARD *pos, S_HASHTABLE* table, int *move, int *score, int *tteflag, int *ttedepth, int *ttHit, int *tteEval, int alpha, int beta, int depth);
+extern int ProbeHashEntry(S_BOARD *pos, S_HASHTABLE* table, int *move, S_HASHENTRY *tte, int alpha, int beta, int depth);
 extern int ProbePvMove(const S_BOARD *pos, const S_HASHTABLE* table);
 extern int GetPvLine(const int depth, S_BOARD *pos, const S_HASHTABLE* table);
 extern void ClearHashTable(S_HASHTABLE *table);

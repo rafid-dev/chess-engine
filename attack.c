@@ -106,10 +106,7 @@ const int NumDirections[13] = {
 
 int get_attackers(S_BOARD *pos, int side, int from, int to, S_ATTACKLIST *attacklist)
 {
-    int f = 0;
     int s = to;
-
-    int *atkvec;
 
     attacklist->count = 0;
 

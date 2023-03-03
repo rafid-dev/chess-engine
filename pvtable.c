@@ -121,7 +121,7 @@ void StoreHashEntry(S_BOARD *pos, S_HASHTABLE* table, const int move, int score,
     table->ptable[index].eval = eval;
 }
 
-int ProbeHashEntry(S_BOARD *pos, S_HASHTABLE* table, int *move, int *score, int *tteflag, int *ttedepth, int *ttHit,int *tteEval, int alpha, int beta, int depth)
+int ProbeHashEntry(S_BOARD *pos, S_HASHTABLE* table, int *move, S_HASHENTRY *tte, int alpha, int beta, int depth)
 {
 
     int index =pos->posKey % table->numEntries;
@@ -136,47 +136,21 @@ int ProbeHashEntry(S_BOARD *pos, S_HASHTABLE* table, int *move, int *score, int 
     if (table->ptable[index].posKey == pos->posKey)
     {
         *move = table->ptable[index].move;
-        *tteflag = table->ptable[index].flags;
-        *ttedepth = table->ptable[index].depth;
-        *ttHit = TRUE;
-        *tteEval = table->ptable[index].eval;
-        if (table->ptable[index].depth >= depth)
-        {
-            table->hit++;
+        tte->flags = table->ptable[index].flags;
+        tte->depth = table->ptable[index].depth;
+        tte->eval = table->ptable[index].eval;
 
-            ASSERT(table->ptable[index].depth >= 1 && table->ptable[index].depth < MAXDEPTH);
-            ASSERT(table->ptable[index].flags >= HFALPHA && table->ptable[index].flags <= HFEXACT);
+        ASSERT(table->ptable[index].depth >= 1 && table->ptable[index].depth < MAXDEPTH);
+        ASSERT(table->ptable[index].flags >= HFALPHA && table->ptable[index].flags <= HFEXACT);
 
-            *score = table->ptable[index].score;
-            if (*score > ISMATE)
-                *score -= pos->ply;
-            else if (*score < -ISMATE)
-                *score += pos->ply;
+        tte->score = table->ptable[index].score;
+        
+        if (tte->score > ISMATE)
+            tte->score -= pos->ply;
+        else if (tte->score < -ISMATE)
+            tte->score += pos->ply;
 
-            switch (table->ptable[index].flags)
-            {
-            case HFALPHA:
-                if (*score <= alpha)
-                {
-                    *score = alpha;
-                    return TRUE;
-                }
-                break;
-            case HFBETA:
-                if (*score >= beta)
-                {
-                    *score = beta;
-                    return TRUE;
-                }
-                break;
-            case HFEXACT:
-                return TRUE;
-                break;
-            default:
-                ASSERT(FALSE);
-                break;
-            }
-        }
+        return TRUE;
     }
 
     return FALSE;

@@ -106,7 +106,6 @@ void InitFilesRanksBrd(){
     int file = FILE_A;
     int rank = RANK_1;
     int sq = A1;
-    int sq64 = 0;
 
     for (index = 0; index < BRD_SQ_NUM; ++index){
         FilesBrd[index] = OFFBOARD;
